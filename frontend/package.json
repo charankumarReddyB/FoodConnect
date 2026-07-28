@@ -1,5 +1,5 @@
 {
-  "name": "figma-make-app",
+  "name": "foodconnect-app",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -7,21 +7,29 @@
     "dev": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
-    "format": "oxfmt"
+    "cap:sync": "cap sync",
+    "cap:android": "cap open android",
+    "cap:ios": "cap open ios"
   },
   "dependencies": {
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/camera": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/geolocation": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor/push-notifications": "^6.0.0",
     "lucide-react": "^1.27.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "recharts": "^3.10.1"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.0.0",
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.0.0",
-    "oxfmt": "^0.2.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
     "vite": "^8.0.0"
