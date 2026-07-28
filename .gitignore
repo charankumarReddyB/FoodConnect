@@ -1,0 +1,33 @@
+# Workspace root gitignore for FoodConnect India
+
+# Build outputs
+backend/target/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
+
+# Dependencies
+frontend/node_modules/
+backend/.mvn/
+backend/mvnw
+backend/mvnw.cmd
+
+# Environment & Secret files
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# IDE / Editor configuration
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# System generated logs & scratch
+.antigravity/
+.system_generated/
+*.log

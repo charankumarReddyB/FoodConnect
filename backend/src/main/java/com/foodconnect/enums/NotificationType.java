@@ -1,0 +1,12 @@
+package com.foodconnect.enums;
+
+public enum NotificationType {
+    DONATION_CREATED,
+    REQUEST_RECEIVED,
+    REQUEST_APPROVED,
+    REQUEST_REJECTED,
+    DELIVERY_ASSIGNED,
+    DELIVERY_PICKED_UP,
+    DELIVERY_COMPLETED,
+    SYSTEM_ALERT
+}
