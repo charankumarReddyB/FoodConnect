@@ -1,4 +1,5 @@
 import { Truck, MapPin, Bell, Clock, CheckCircle, Star, TrendingUp, ChevronRight, Navigation } from 'lucide-react'
+import CheckInButton from '../components/CheckInButton'
 
 type Screen = string
 interface VolunteerDashboardProps {
@@ -68,16 +69,26 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
             </button>
           </div>
         </div>
-        {/* Availability toggle */}
-        <div className="flex items-center gap-3 mt-3 bg-white/10 rounded-xl p-3">
-          <div className="flex-1">
-            <p className="text-white font-semibold text-sm">Available for Deliveries</p>
-            <p className="text-white/60 text-xs">Receiving nearby requests</p>
-          </div>
-          <div className="relative">
-            <div className="w-12 h-6 bg-success rounded-full flex items-center px-1 cursor-pointer">
-              <div className="w-4 h-4 bg-white rounded-full shadow ml-auto" />
+
+        {/* Availability toggle & Check-in */}
+        <div className="grid sm:grid-cols-2 gap-3 mt-4">
+          <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
+            <div className="flex-1">
+              <p className="text-white font-semibold text-sm">Available for Deliveries</p>
+              <p className="text-white/60 text-xs">Receiving nearby requests</p>
             </div>
+            <div className="relative">
+              <div className="w-12 h-6 bg-success rounded-full flex items-center px-1 cursor-pointer">
+                <div className="w-4 h-4 bg-white rounded-full shadow ml-auto" />
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/10 rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p className="text-white font-semibold text-sm">Shift Check-in</p>
+              <p className="text-white/60 text-xs">Record attendance for today</p>
+            </div>
+            <CheckInButton variant="header" eventId="EVT-VOLUNTEER-SHIFT" location="MG Road Hub" />
           </div>
         </div>
       </div>

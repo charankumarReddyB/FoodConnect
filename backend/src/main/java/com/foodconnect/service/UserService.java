@@ -4,9 +4,12 @@ import com.foodconnect.dto.request.LocationUpdateRequest;
 import com.foodconnect.dto.request.UserProfileUpdateRequest;
 import com.foodconnect.dto.response.UserResponse;
 
+import java.util.UUID;
+
 public interface UserService {
-    UserResponse getUserById(Long id);
-    UserResponse updateProfile(Long userId, UserProfileUpdateRequest request);
-    UserResponse updateLocation(Long userId, LocationUpdateRequest request);
-    void deactivateAccount(Long userId);
+    UserResponse getUserById(UUID id);
+    UserResponse updateProfile(UUID userId, UserProfileUpdateRequest request);
+    UserResponse updateLocation(UUID userId, LocationUpdateRequest request);
+    void toggleUserStatus(UUID userId, Boolean active);
+    void deactivateAccount(UUID userId);
 }

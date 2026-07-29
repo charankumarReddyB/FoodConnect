@@ -2,27 +2,30 @@ package com.foodconnect.mapper;
 
 import com.foodconnect.dto.response.DeliveryResponse;
 import com.foodconnect.entity.Delivery;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class DeliveryMapper {
 
-    private final DonationMapper donationMapper;
-    private final VolunteerMapper volunteerMapper;
-
-    public DeliveryResponse toResponse(Delivery delivery) {
-        if (delivery == null) return null;
+    public DeliveryResponse toResponse(Delivery d) {
+        if (d == null) return null;
 
         return DeliveryResponse.builder()
-                .id(delivery.getId())
-                .donation(donationMapper.toResponse(delivery.getDonation()))
-                .volunteer(volunteerMapper.toResponse(delivery.getVolunteer()))
-                .pickupTime(delivery.getPickupTime())
-                .deliveryTime(delivery.getDeliveryTime())
-                .status(delivery.getStatus())
-                .currentLocation(delivery.getCurrentLocation())
+                .id(d.getId())
+                .donationId(d.getDonation() != null ? d.getDonation().getId() : null)
+                .donationTitle(d.getDonation() != null ? d.getDonation().getTitle() : null)
+                .pickupAddress(d.getDonation() != null ? d.getDonation().getPickupAddress() : null)
+                .volunteerId(d.getVolunteer() != null ? d.getVolunteer().getId() : null)
+                .volunteerName(d.getVolunteer() != null && d.getVolunteer().getUser() != null ? d.getVolunteer().getUser().getFullName() : null)
+                .volunteerPhone(d.getVolunteer() != null && d.getVolunteer().getUser() != null ? d.getVolunteer().getUser().getPhone() : null)
+                .requestId(d.getRequest() != null ? d.getRequest().getId() : null)
+                .status(d.getStatus())
+                .pickupTime(d.getPickupTime())
+                .deliveryTime(d.getDeliveryTime())
+                .pickupVerificationCode(d.getPickupVerificationCode())
+                .deliveryVerificationCode(d.getDeliveryVerificationCode())
+                .notes(d.getNotes())
+                .createdAt(d.getCreatedAt())
                 .build();
     }
 }

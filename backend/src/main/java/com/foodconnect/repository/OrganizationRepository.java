@@ -8,10 +8,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface OrganizationRepository extends JpaRepository<Organization, Long> {
-    Optional<Organization> findByUserId(Long userId);
-    Page<Organization> findByVerified(Boolean verified, Pageable pageable);
-    Page<Organization> findByType(OrganizationType type, Pageable pageable);
+public interface OrganizationRepository extends JpaRepository<Organization, UUID> {
+    Optional<Organization> findByUserId(UUID userId);
+    Optional<Organization> findByRegistrationNumber(String registrationNumber);
+    Page<Organization> findByOrgType(OrganizationType orgType, Pageable pageable);
+    Page<Organization> findByIsVerified(Boolean isVerified, Pageable pageable);
 }

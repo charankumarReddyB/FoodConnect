@@ -1,99 +1,104 @@
 package com.foodconnect.service.impl;
 
 import com.foodconnect.dto.common.PagedResponse;
-import com.foodconnect.dto.organization.OrganizationDTO;
+import com.foodconnect.dto.response.OrganizationResponse;
 import com.foodconnect.entity.Organization;
-import com.foodconnect.entity.User;
+import com.foodconnect.enums.OrganizationType;
 import com.foodconnect.exception.ResourceNotFoundException;
 import com.foodconnect.repository.OrganizationRepository;
-import com.foodconnect.repository.UserRepository;
 import com.foodconnect.service.OrganizationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrganizationServiceImpl implements OrganizationService {
 
     private final OrganizationRepository organizationRepository;
-    private final UserRepository userRepository;
 
     @Override
-    @Transactional
-    public OrganizationDTO registerOrganization(Long userId, OrganizationDTO dto) {
-        User user = null;
-        if (userId != null) {
-            user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-        }
-
-        Organization org = Organization.builder()
-                .organizationName(dto.getOrganizationName())
-                .type(dto.getType())
-                .email(dto.getEmail())
-                .phone(dto.getPhone())
-                .address(dto.getAddress())
-                .latitude(dto.getLatitude())
-                .longitude(dto.getLongitude())
-                .verified(false)
-                .user(user)
-                .build();
-
-        Organization saved = organizationRepository.save(org);
-        return toDTO(saved);
+    @Transactional(readOnly = true)
+    public OrganizationResponse getOrganizationByUserId(UUID userId) {
+        Organization org = organizationRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization profile not found for user ID: " + userId));
+        return mapToResponse(org);
     }
 
     @Override
     @Transactional
-    public OrganizationDTO verifyOrganization(Long orgId) {
-        Organization org = organizationRepository.findById(orgId)
-                .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", orgId));
+    public OrganizationResponse updateOrganizationCapacity(UUID userId, Integer capacityServings) {
+        Organization org = organizationRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization profile not found for user ID: " + userId));
 
-        org.setVerified(true);
+        org.setCapacityServings(capacityServings);
         Organization updated = organizationRepository.save(org);
-        return toDTO(updated);
+        return mapToResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public OrganizationResponse verifyOrganization(UUID organizationId, Boolean isVerified) {
+        Organization org = organizationRepository.findById(organizationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found with ID: " + organizationId));
+
+        org.setIsVerified(isVerified != null ? isVerified : true);
+        Organization updated = organizationRepository.save(org);
+        return mapToResponse(updated);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<OrganizationDTO> getOrganizations(Boolean verified, Pageable pageable) {
-        Page<Organization> page;
-        if (verified != null) {
-            page = organizationRepository.findByVerified(verified, pageable);
+    public PagedResponse<OrganizationResponse> getOrganizations(OrganizationType orgType, Boolean isVerified, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Organization> pageResult;
+
+        if (orgType != null) {
+            pageResult = organizationRepository.findByOrgType(orgType, pageable);
+        } else if (isVerified != null) {
+            pageResult = organizationRepository.findByIsVerified(isVerified, pageable);
         } else {
-            page = organizationRepository.findAll(pageable);
+            pageResult = organizationRepository.findAll(pageable);
         }
 
-        List<OrganizationDTO> content = page.getContent().stream().map(this::toDTO).toList();
-        return new PagedResponse<>(content, page.getNumber(), page.getSize(), page.getTotalElements(), page.getTotalPages(), page.isLast());
+        List<OrganizationResponse> content = pageResult.getContent().stream()
+                .map(this::mapToResponse)
+                .toList();
+
+        return new PagedResponse<>(
+                content,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages(),
+                pageResult.isLast()
+        );
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public OrganizationDTO getOrganizationById(Long id) {
-        Organization org = organizationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Organization", "id", id));
-        return toDTO(org);
-    }
-
-    private OrganizationDTO toDTO(Organization org) {
-        return OrganizationDTO.builder()
-                .id(org.getId())
-                .organizationName(org.getOrganizationName())
-                .type(org.getType())
-                .email(org.getEmail())
-                .phone(org.getPhone())
-                .address(org.getAddress())
-                .latitude(org.getLatitude())
-                .longitude(org.getLongitude())
-                .verified(org.getVerified())
-                .userId(org.getUser() != null ? org.getUser().getId() : null)
-                .createdAt(org.getCreatedAt())
+    private OrganizationResponse mapToResponse(Organization o) {
+        return OrganizationResponse.builder()
+                .id(o.getId())
+                .userId(o.getUser() != null ? o.getUser().getId() : null)
+                .organizationName(o.getOrganizationName())
+                .orgType(o.getOrgType())
+                .registrationNumber(o.getRegistrationNumber())
+                .contactPerson(o.getContactPerson())
+                .contactEmail(o.getContactEmail())
+                .contactPhone(o.getContactPhone())
+                .address(o.getAddress())
+                .latitude(o.getLatitude())
+                .longitude(o.getLongitude())
+                .isVerified(o.getIsVerified())
+                .capacityServings(o.getCapacityServings())
+                .createdAt(o.getCreatedAt())
                 .build();
     }
 }

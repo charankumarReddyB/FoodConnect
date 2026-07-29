@@ -10,12 +10,13 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.UUID;
 
 @Component
 @Slf4j
 public class JwtTokenProvider {
 
-    @Value("${app.jwt.secret}")
+    @Value("${app.jwt.secret:9a6e8b1c4d7e2f5a8b3c6d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a}")
     private String jwtSecret;
 
     @Value("${app.jwt.expiration-ms:86400000}")
@@ -33,8 +34,8 @@ public class JwtTokenProvider {
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         return Jwts.builder()
-                .subject(Long.toString(userPrincipal.getId()))
-                .issuedAt(new Date())
+                .subject(userPrincipal.getId().toString())
+                .issuedAt(now)
                 .expiration(expiryDate)
                 .claim("email", userPrincipal.getEmail())
                 .claim("authorities", userPrincipal.getAuthorities())
@@ -42,14 +43,14 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    public Long getUserIdFromJWT(String token) {
+    public UUID getUserIdFromJWT(String token) {
         Claims claims = Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
 
-        return Long.parseLong(claims.getSubject());
+        return UUID.fromString(claims.getSubject());
     }
 
     public boolean validateToken(String authToken) {

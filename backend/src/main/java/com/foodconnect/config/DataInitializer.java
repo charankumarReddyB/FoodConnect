@@ -1,9 +1,7 @@
 package com.foodconnect.config;
 
-import com.foodconnect.entity.Role;
 import com.foodconnect.entity.User;
-import com.foodconnect.enums.RoleName;
-import com.foodconnect.repository.RoleRepository;
+import com.foodconnect.enums.UserRole;
 import com.foodconnect.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,34 +14,25 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-    private final RoleRepository roleRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
-        log.info("Initializing default roles and admin account for FoodConnect India...");
-
-        for (RoleName roleName : RoleName.values()) {
-            if (roleRepository.findByName(roleName).isEmpty()) {
-                Role role = Role.builder().name(roleName).build();
-                roleRepository.save(role);
-                log.info("Created role: {}", roleName);
-            }
-        }
+        log.info("Initializing default seed data for FoodConnect...");
 
         if (!userRepository.existsByEmail("admin@foodconnect.in")) {
-            Role adminRole = roleRepository.findByName(RoleName.ADMIN).orElseThrow();
             User admin = User.builder()
-                    .name("FoodConnect Admin India")
+                    .fullName("FoodConnect Admin India")
                     .email("admin@foodconnect.in")
                     .phone("+919876543210")
-                    .password(passwordEncoder.encode("Admin@123"))
-                    .role(adminRole)
+                    .passwordHash(passwordEncoder.encode("Admin@123"))
+                    .role(UserRole.ADMIN)
                     .address("100 Feet Road, Indiranagar, Bengaluru, Karnataka 560038")
                     .latitude(12.9716)
                     .longitude(77.5946)
-                    .active(true)
+                    .isActive(true)
+                    .emailVerified(true)
                     .build();
 
             userRepository.save(admin);

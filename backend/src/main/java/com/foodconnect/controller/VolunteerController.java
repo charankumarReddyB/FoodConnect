@@ -1,55 +1,64 @@
 package com.foodconnect.controller;
 
 import com.foodconnect.dto.common.ApiResponse;
-import com.foodconnect.dto.volunteer.VolunteerDTO;
-import com.foodconnect.dto.volunteer.VolunteerRegisterRequest;
-import com.foodconnect.security.UserPrincipal;
+import com.foodconnect.dto.common.PagedResponse;
+import com.foodconnect.dto.response.VolunteerResponse;
+import com.foodconnect.security.SecurityUtils;
 import com.foodconnect.service.VolunteerService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/volunteers")
 @RequiredArgsConstructor
-@Tag(name = "Volunteers", description = "Volunteer registration and availability management endpoints")
+@Tag(name = "Volunteers", description = "Endpoints for volunteer profiles, availability, and active tracking")
 public class VolunteerController {
 
     private final VolunteerService volunteerService;
 
-    @PostMapping("/register")
-    @PreAuthorize("hasAnyRole('VOLUNTEER', 'ADMIN')")
-    @Operation(summary = "Register user as a volunteer")
-    public ResponseEntity<ApiResponse<VolunteerDTO>> registerVolunteer(
-            @AuthenticationPrincipal UserPrincipal currentUser,
-            @Valid @RequestBody VolunteerRegisterRequest request) {
-        VolunteerDTO response = volunteerService.registerVolunteer(currentUser.getId(), request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Volunteer registered successfully", response));
-    }
-
     @GetMapping("/me")
     @PreAuthorize("hasAnyRole('VOLUNTEER', 'ADMIN')")
-    @Operation(summary = "Get volunteer profile")
-    public ResponseEntity<ApiResponse<VolunteerDTO>> getVolunteerProfile(
-            @AuthenticationPrincipal UserPrincipal currentUser) {
-        VolunteerDTO response = volunteerService.getVolunteerProfile(currentUser.getId());
+    @Operation(summary = "Get current authenticated volunteer profile")
+    public ResponseEntity<ApiResponse<VolunteerResponse>> getMyVolunteerProfile() {
+        UUID authenticatedUserId = SecurityUtils.getCurrentUserId();
+        VolunteerResponse response = volunteerService.getVolunteerByUserId(authenticatedUserId);
         return ResponseEntity.ok(ApiResponse.success("Volunteer profile retrieved", response));
     }
 
-    @PostMapping("/availability")
+    @PatchMapping("/availability")
     @PreAuthorize("hasAnyRole('VOLUNTEER', 'ADMIN')")
-    @Operation(summary = "Toggle volunteer availability status")
-    public ResponseEntity<ApiResponse<VolunteerDTO>> toggleAvailability(
-            @AuthenticationPrincipal UserPrincipal currentUser,
-            @RequestParam Boolean availability) {
-        VolunteerDTO response = volunteerService.toggleAvailability(currentUser.getId(), availability);
-        return ResponseEntity.ok(ApiResponse.success("Availability updated", response));
+    @Operation(summary = "Toggle volunteer availability for delivery assignments")
+    public ResponseEntity<ApiResponse<VolunteerResponse>> toggleAvailability(@RequestParam(required = false) Boolean isAvailable) {
+        UUID authenticatedUserId = SecurityUtils.getCurrentUserId();
+        VolunteerResponse response = volunteerService.toggleAvailability(authenticatedUserId, isAvailable);
+        return ResponseEntity.ok(ApiResponse.success("Volunteer availability updated", response));
+    }
+
+    @PostMapping("/location")
+    @PreAuthorize("hasAnyRole('VOLUNTEER', 'ADMIN')")
+    @Operation(summary = "Update current volunteer GPS coordinates")
+    public ResponseEntity<ApiResponse<VolunteerResponse>> updateLocation(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude) {
+        UUID authenticatedUserId = SecurityUtils.getCurrentUserId();
+        VolunteerResponse response = volunteerService.updateLocation(authenticatedUserId, latitude, longitude);
+        return ResponseEntity.ok(ApiResponse.success("Volunteer location updated", response));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Admin: List all registered volunteers")
+    public ResponseEntity<ApiResponse<PagedResponse<VolunteerResponse>>> getAllVolunteers(
+            @RequestParam(required = false) Boolean isAvailable,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PagedResponse<VolunteerResponse> response = volunteerService.getAllVolunteers(isAvailable, page, size);
+        return ResponseEntity.ok(ApiResponse.success("Volunteers fetched successfully", response));
     }
 }

@@ -6,23 +6,26 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class OrganizationResponse {
-    private Long id;
+    private UUID id;
+    private UUID userId;
     private String organizationName;
-    private OrganizationType type;
-    private String email;
-    private String phone;
+    private OrganizationType orgType;
+    private String registrationNumber;
+    private String contactPerson;
+    private String contactEmail;
+    private String contactPhone;
     private String address;
     private Double latitude;
     private Double longitude;
-    private Boolean verified;
-    private Long userId;
-    private Double distanceKm;
-    private LocalDateTime createdAt;
+    private Boolean isVerified;
+    private Integer capacityServings;
+    private OffsetDateTime createdAt;
 }

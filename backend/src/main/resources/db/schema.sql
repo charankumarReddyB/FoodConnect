@@ -122,6 +122,17 @@ CREATE TABLE IF NOT EXISTS settings (
     description VARCHAR(255)
 );
 
+CREATE TABLE IF NOT EXISTS check_ins (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_id VARCHAR(100),
+    location VARCHAR(255),
+    notes TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'CHECKED_IN',
+    checked_in_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Indexes for Location & Search Performance
 CREATE INDEX IF NOT EXISTS idx_users_location ON users(latitude, longitude);
 CREATE INDEX IF NOT EXISTS idx_donations_location ON donations(latitude, longitude);
@@ -130,3 +141,6 @@ CREATE INDEX IF NOT EXISTS idx_donations_category ON donations(category);
 CREATE INDEX IF NOT EXISTS idx_donations_donor ON donations(donor_id);
 CREATE INDEX IF NOT EXISTS idx_requests_donation ON donation_requests(donation_id);
 CREATE INDEX IF NOT EXISTS idx_requests_recipient ON donation_requests(recipient_id);
+CREATE INDEX IF NOT EXISTS idx_checkins_user ON check_ins(user_id);
+CREATE INDEX IF NOT EXISTS idx_checkins_timestamp ON check_ins(checked_in_at);
+

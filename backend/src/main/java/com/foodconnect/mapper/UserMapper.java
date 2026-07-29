@@ -12,15 +12,16 @@ public class UserMapper {
 
         return UserResponse.builder()
                 .id(user.getId())
-                .name(user.getName())
+                .fullName(user.getFullName())
                 .email(user.getEmail())
                 .phone(user.getPhone())
-                .role(user.getRole() != null ? user.getRole().getName().name() : null)
-                .profileImage(user.getProfileImage())
+                .role(user.getRole())
+                .profileImageUrl(user.getProfileImageUrl())
                 .address(user.getAddress())
                 .latitude(user.getLatitude())
                 .longitude(user.getLongitude())
-                .active(user.getActive())
+                .isActive(user.getIsActive())
+                .emailVerified(user.getEmailVerified())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

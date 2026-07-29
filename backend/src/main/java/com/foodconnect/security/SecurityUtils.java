@@ -4,6 +4,8 @@ import com.foodconnect.exception.UnauthorizedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.util.UUID;
+
 public class SecurityUtils {
 
     public static UserPrincipal getCurrentUser() {
@@ -17,7 +19,7 @@ public class SecurityUtils {
         return (UserPrincipal) authentication.getPrincipal();
     }
 
-    public static Long getCurrentUserId() {
+    public static UUID getCurrentUserId() {
         return getCurrentUser().getId();
     }
 }

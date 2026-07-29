@@ -1,14 +1,14 @@
 package com.foodconnect.service;
 
-import com.foodconnect.dto.request.DeliveryStatusUpdateRequest;
+import com.foodconnect.dto.common.PagedResponse;
 import com.foodconnect.dto.response.DeliveryResponse;
-import com.foodconnect.response.PagedResponse;
+import com.foodconnect.enums.DeliveryStatus;
+
+import java.util.UUID;
 
 public interface DeliveryService {
-    DeliveryResponse assignDelivery(Long donationId, Long volunteerUserId);
-    DeliveryResponse acceptDelivery(Long deliveryId, Long volunteerUserId);
-    DeliveryResponse updateDeliveryStatus(Long deliveryId, Long volunteerUserId, DeliveryStatusUpdateRequest request);
-    DeliveryResponse completeDelivery(Long deliveryId, Long recipientUserId);
-    DeliveryResponse getDeliveryByDonationId(Long donationId);
-    PagedResponse<DeliveryResponse> getMyDeliveries(Long volunteerUserId, int page, int size);
+    DeliveryResponse claimDelivery(UUID donationId, UUID volunteerUserId);
+    DeliveryResponse updateDeliveryStatus(UUID deliveryId, UUID volunteerUserId, DeliveryStatus status, String verificationCode);
+    DeliveryResponse getDeliveryByDonationId(UUID donationId);
+    PagedResponse<DeliveryResponse> getMyDeliveries(UUID volunteerUserId, int page, int size);
 }

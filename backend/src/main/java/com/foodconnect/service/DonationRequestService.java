@@ -1,16 +1,14 @@
 package com.foodconnect.service;
 
-import com.foodconnect.dto.request.DonationRequestCreateDto;
+import com.foodconnect.dto.common.PagedResponse;
 import com.foodconnect.dto.response.DonationRequestResponse;
-import com.foodconnect.response.PagedResponse;
+import com.foodconnect.enums.RequestStatus;
 
-import java.util.List;
+import java.util.UUID;
 
 public interface DonationRequestService {
-    DonationRequestResponse createRequest(Long recipientId, DonationRequestCreateDto dto);
-    DonationRequestResponse acceptRequest(Long requestId, Long donorId);
-    DonationRequestResponse rejectRequest(Long requestId, Long donorId);
-    DonationRequestResponse cancelRequest(Long requestId, Long recipientId);
-    List<DonationRequestResponse> getRequestsForDonation(Long donationId, Long donorId);
-    PagedResponse<DonationRequestResponse> getMyRequests(Long recipientId, int page, int size);
+    DonationRequestResponse requestDonation(UUID donationId, UUID recipientUserId, Integer requestedServings, String notes);
+    DonationRequestResponse respondToRequest(UUID requestId, UUID donorUserId, RequestStatus status);
+    PagedResponse<DonationRequestResponse> getRequestsForDonation(UUID donationId, int page, int size);
+    PagedResponse<DonationRequestResponse> getMyRequests(UUID recipientUserId, int page, int size);
 }

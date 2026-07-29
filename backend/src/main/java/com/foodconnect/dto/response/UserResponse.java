@@ -1,26 +1,29 @@
 package com.foodconnect.dto.response;
 
+import com.foodconnect.enums.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class UserResponse {
-    private Long id;
-    private String name;
+    private UUID id;
     private String email;
     private String phone;
-    private String role;
-    private String profileImage;
+    private String fullName;
+    private UserRole role;
+    private String profileImageUrl;
     private String address;
     private Double latitude;
     private Double longitude;
-    private Boolean active;
-    private LocalDateTime createdAt;
+    private Boolean isActive;
+    private Boolean emailVerified;
+    private OffsetDateTime createdAt;
 }

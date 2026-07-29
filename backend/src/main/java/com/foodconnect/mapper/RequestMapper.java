@@ -2,26 +2,26 @@ package com.foodconnect.mapper;
 
 import com.foodconnect.dto.response.DonationRequestResponse;
 import com.foodconnect.entity.DonationRequest;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class RequestMapper {
-
-    private final DonationMapper donationMapper;
-    private final UserMapper userMapper;
 
     public DonationRequestResponse toResponse(DonationRequest request) {
         if (request == null) return null;
 
         return DonationRequestResponse.builder()
                 .id(request.getId())
-                .donation(donationMapper.toResponse(request.getDonation()))
-                .recipient(userMapper.toResponse(request.getRecipient()))
+                .donationId(request.getDonation() != null ? request.getDonation().getId() : null)
+                .donationTitle(request.getDonation() != null ? request.getDonation().getTitle() : null)
+                .recipientId(request.getRecipient() != null ? request.getRecipient().getId() : null)
+                .recipientOrganizationName(request.getRecipient() != null ? request.getRecipient().getOrganizationName() : null)
                 .status(request.getStatus())
+                .requestedServings(request.getRequestedServings())
+                .notes(request.getNotes())
                 .requestTime(request.getRequestTime())
-                .approvalTime(request.getApprovalTime())
+                .responseTime(request.getResponseTime())
+                .createdAt(request.getCreatedAt())
                 .build();
     }
 }

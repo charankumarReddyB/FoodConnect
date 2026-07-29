@@ -1,47 +1,49 @@
 package com.foodconnect.dto.request;
 
 import com.foodconnect.enums.DeliveryMethod;
-import com.foodconnect.enums.FoodCategory;
-import com.foodconnect.enums.VegNonVeg;
+import com.foodconnect.enums.FoodType;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class DonationCreateRequest {
 
-    @NotBlank(message = "Food name is required")
-    private String foodName;
+    @NotBlank(message = "Donation title is required")
+    private String title;
 
     private String description;
 
-    @NotNull(message = "Food category is required")
-    private FoodCategory category;
-
-    @NotNull(message = "Veg/NonVeg selection is required")
-    private VegNonVeg vegNonVeg;
+    @NotNull(message = "Food type selection is required")
+    private FoodType foodType;
 
     @NotBlank(message = "Quantity description is required")
-    private String quantity;
+    private String quantityDescription;
 
     @NotNull(message = "Estimated servings is required")
-    @Min(value = 1, message = "Servings must be at least 1")
+    @Min(value = 1, message = "Estimated servings must be at least 1")
     private Integer estimatedServings;
 
     @NotNull(message = "Prepared time is required")
-    private LocalDateTime preparedTime;
+    private OffsetDateTime preparedTime;
 
-    @NotNull(message = "Pickup deadline is required")
-    @Future(message = "Pickup deadline must be in the future")
-    private LocalDateTime pickupDeadline;
+    @NotNull(message = "Expiry time is required")
+    @Future(message = "Expiry time must be in the future")
+    private OffsetDateTime expiryTime;
 
     @NotBlank(message = "Pickup address is required")
-    private String address;
+    private String pickupAddress;
 
     @NotNull(message = "Latitude is required")
     private Double latitude;

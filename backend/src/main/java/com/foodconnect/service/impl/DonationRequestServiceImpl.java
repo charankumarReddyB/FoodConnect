@@ -1,23 +1,22 @@
 package com.foodconnect.service.impl;
 
-import com.foodconnect.dto.request.DonationRequestCreateDto;
+import com.foodconnect.dto.common.PagedResponse;
 import com.foodconnect.dto.response.DonationRequestResponse;
 import com.foodconnect.entity.Donation;
 import com.foodconnect.entity.DonationRequest;
-import com.foodconnect.entity.User;
+import com.foodconnect.entity.Organization;
 import com.foodconnect.enums.DonationStatus;
 import com.foodconnect.enums.RequestStatus;
 import com.foodconnect.exception.BadRequestException;
 import com.foodconnect.exception.DuplicateResourceException;
 import com.foodconnect.exception.ResourceNotFoundException;
 import com.foodconnect.exception.UnauthorizedException;
-import com.foodconnect.mapper.RequestMapper;
 import com.foodconnect.repository.DonationRepository;
 import com.foodconnect.repository.DonationRequestRepository;
-import com.foodconnect.repository.UserRepository;
+import com.foodconnect.repository.OrganizationRepository;
 import com.foodconnect.service.DonationRequestService;
-import com.foodconnect.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -25,167 +24,145 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DonationRequestServiceImpl implements DonationRequestService {
 
-    private final DonationRequestRepository requestRepository;
+    private final DonationRequestRepository donationRequestRepository;
     private final DonationRepository donationRepository;
-    private final UserRepository userRepository;
-    private final NotificationService notificationService;
-    private final RequestMapper requestMapper;
+    private final OrganizationRepository organizationRepository;
 
     @Override
     @Transactional
-    public DonationRequestResponse createRequest(Long recipientId, DonationRequestCreateDto dto) {
-        Donation donation = donationRepository.findById(dto.getDonationId())
-                .orElseThrow(() -> new ResourceNotFoundException("Donation", "id", dto.getDonationId()));
+    public DonationRequestResponse requestDonation(UUID donationId, UUID recipientUserId, Integer requestedServings, String notes) {
+        log.info("Processing donation request for donation ID {} by recipient user ID {}", donationId, recipientUserId);
+
+        Organization recipient = organizationRepository.findByUserId(recipientUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Recipient organization profile not found for user ID: " + recipientUserId));
+
+        Donation donation = donationRepository.findById(donationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Donation not found with ID: " + donationId));
 
         if (donation.getStatus() != DonationStatus.CREATED && donation.getStatus() != DonationStatus.REQUESTED) {
-            throw new BadRequestException("Donation is not available for request. Current status: " + donation.getStatus());
+            throw new BadRequestException("Donation is no longer available for requesting. Status: " + donation.getStatus());
         }
 
-        if (donation.getPickupDeadline().isBefore(LocalDateTime.now())) {
-            donation.setStatus(DonationStatus.EXPIRED);
-            donationRepository.save(donation);
-            throw new BadRequestException("This donation has expired.");
+        if (donationRequestRepository.existsByDonationIdAndRecipientId(donationId, recipient.getId())) {
+            throw new DuplicateResourceException("Organization has already submitted a request for this donation.");
         }
-
-        if (requestRepository.existsByDonationIdAndRecipientId(dto.getDonationId(), recipientId)) {
-            throw new DuplicateResourceException("You have already submitted a request for this donation.");
-        }
-
-        User recipient = userRepository.findById(recipientId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", recipientId));
 
         DonationRequest request = DonationRequest.builder()
                 .donation(donation)
                 .recipient(recipient)
+                .requestedServings(requestedServings != null ? requestedServings : donation.getEstimatedServings())
+                .notes(notes)
                 .status(RequestStatus.PENDING)
+                .requestTime(OffsetDateTime.now())
                 .build();
 
         donation.setStatus(DonationStatus.REQUESTED);
         donationRepository.save(donation);
 
-        DonationRequest saved = requestRepository.save(request);
-
-        notificationService.createNotification(
-                donation.getDonor().getId(),
-                "New donation request received for '" + donation.getFoodName() + "' from " + recipient.getName(),
-                "DONATION_REQUEST"
-        );
-
-        return requestMapper.toResponse(saved);
+        DonationRequest saved = donationRequestRepository.save(request);
+        log.info("Donation request created successfully with ID: {}", saved.getId());
+        return mapToResponse(saved);
     }
 
     @Override
     @Transactional
-    public DonationRequestResponse acceptRequest(Long requestId, Long donorId) {
-        DonationRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("DonationRequest", "id", requestId));
+    public DonationRequestResponse respondToRequest(UUID requestId, UUID donorUserId, RequestStatus status) {
+        log.info("Donor user ID {} responding to request ID {} with status {}", donorUserId, requestId, status);
 
-        if (!request.getDonation().getDonor().getId().equals(donorId)) {
-            throw new UnauthorizedException("Only the donation owner can accept requests.");
+        DonationRequest request = donationRequestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Donation request not found with ID: " + requestId));
+
+        if (!request.getDonation().getDonor().getId().equals(donorUserId)) {
+            throw new UnauthorizedException("Only the donation owner can accept or reject requests.");
         }
 
-        request.setStatus(RequestStatus.ACCEPTED);
-        request.setApprovalTime(LocalDateTime.now());
+        request.setStatus(status);
+        request.setResponseTime(OffsetDateTime.now());
 
-        Donation donation = request.getDonation();
-        donation.setStatus(DonationStatus.ACCEPTED);
-        donationRepository.save(donation);
+        if (status == RequestStatus.ACCEPTED) {
+            request.getDonation().setStatus(DonationStatus.ACCEPTED);
+            donationRepository.save(request.getDonation());
 
-        List<DonationRequest> otherRequests = requestRepository.findByDonationIdAndStatus(donation.getId(), RequestStatus.PENDING);
-        for (DonationRequest other : otherRequests) {
-            if (!other.getId().equals(requestId)) {
-                other.setStatus(RequestStatus.REJECTED);
-                requestRepository.save(other);
+            // Reject all other pending requests for the same donation
+            List<DonationRequest> otherRequests = donationRequestRepository.findByDonationIdAndStatus(request.getDonation().getId(), RequestStatus.PENDING);
+            for (DonationRequest other : otherRequests) {
+                if (!other.getId().equals(requestId)) {
+                    other.setStatus(RequestStatus.REJECTED);
+                    other.setResponseTime(OffsetDateTime.now());
+                    donationRequestRepository.save(other);
+                }
             }
         }
 
-        DonationRequest updated = requestRepository.save(request);
-
-        notificationService.createNotification(
-                request.getRecipient().getId(),
-                "Your request for donation '" + donation.getFoodName() + "' has been ACCEPTED by the donor!",
-                "REQUEST_ACCEPTED"
-        );
-
-        return requestMapper.toResponse(updated);
-    }
-
-    @Override
-    @Transactional
-    public DonationRequestResponse rejectRequest(Long requestId, Long donorId) {
-        DonationRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("DonationRequest", "id", requestId));
-
-        if (!request.getDonation().getDonor().getId().equals(donorId)) {
-            throw new UnauthorizedException("Only the donation owner can reject requests.");
-        }
-
-        request.setStatus(RequestStatus.REJECTED);
-        DonationRequest updated = requestRepository.save(request);
-
-        notificationService.createNotification(
-                request.getRecipient().getId(),
-                "Your request for donation '" + request.getDonation().getFoodName() + "' was not accepted.",
-                "REQUEST_REJECTED"
-        );
-
-        return requestMapper.toResponse(updated);
-    }
-
-    @Override
-    @Transactional
-    public DonationRequestResponse cancelRequest(Long requestId, Long recipientId) {
-        DonationRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("DonationRequest", "id", requestId));
-
-        if (!request.getRecipient().getId().equals(recipientId)) {
-            throw new UnauthorizedException("Only the recipient can cancel their request.");
-        }
-
-        request.setStatus(RequestStatus.CANCELLED);
-        DonationRequest updated = requestRepository.save(request);
-        return requestMapper.toResponse(updated);
+        DonationRequest saved = donationRequestRepository.save(request);
+        return mapToResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<DonationRequestResponse> getRequestsForDonation(Long donationId, Long donorId) {
-        Donation donation = donationRepository.findById(donationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Donation", "id", donationId));
-
-        if (!donation.getDonor().getId().equals(donorId)) {
-            throw new UnauthorizedException("Only the donor can view requests for this donation.");
-        }
-
-        return requestRepository.findByDonationId(donationId).stream()
-                .map(requestMapper::toResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PagedResponse<DonationRequestResponse> getMyRequests(Long recipientId, int page, int size) {
+    public PagedResponse<DonationRequestResponse> getRequestsForDonation(UUID donationId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("requestTime").descending());
-        Page<DonationRequest> pageResult = requestRepository.findByRecipientId(recipientId, pageable);
+        Page<DonationRequest> pageResult = donationRequestRepository.findByDonationId(donationId, pageable);
 
         List<DonationRequestResponse> content = pageResult.getContent().stream()
-                .map(requestMapper::toResponse)
+                .map(this::mapToResponse)
                 .toList();
 
-        return PagedResponse.<DonationRequestResponse>builder()
-                .content(content)
-                .pageNumber(pageResult.getNumber())
-                .pageSize(pageResult.getSize())
-                .totalElements(pageResult.getTotalElements())
-                .totalPages(pageResult.getTotalPages())
-                .last(pageResult.isLast())
+        return new PagedResponse<>(
+                content,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages(),
+                pageResult.isLast()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<DonationRequestResponse> getMyRequests(UUID recipientUserId, int page, int size) {
+        Organization recipient = organizationRepository.findByUserId(recipientUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Recipient organization profile not found for user ID: " + recipientUserId));
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("requestTime").descending());
+        Page<DonationRequest> pageResult = donationRequestRepository.findByRecipientId(recipient.getId(), pageable);
+
+        List<DonationRequestResponse> content = pageResult.getContent().stream()
+                .map(this::mapToResponse)
+                .toList();
+
+        return new PagedResponse<>(
+                content,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages(),
+                pageResult.isLast()
+        );
+    }
+
+    private DonationRequestResponse mapToResponse(DonationRequest r) {
+        return DonationRequestResponse.builder()
+                .id(r.getId())
+                .donationId(r.getDonation() != null ? r.getDonation().getId() : null)
+                .donationTitle(r.getDonation() != null ? r.getDonation().getTitle() : null)
+                .recipientId(r.getRecipient() != null ? r.getRecipient().getId() : null)
+                .recipientOrganizationName(r.getRecipient() != null ? r.getRecipient().getOrganizationName() : null)
+                .status(r.getStatus())
+                .requestedServings(r.getRequestedServings())
+                .notes(r.getNotes())
+                .requestTime(r.getRequestTime())
+                .responseTime(r.getResponseTime())
+                .createdAt(r.getCreatedAt())
                 .build();
     }
 }

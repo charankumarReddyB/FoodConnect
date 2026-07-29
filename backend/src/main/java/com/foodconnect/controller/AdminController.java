@@ -1,9 +1,9 @@
 package com.foodconnect.controller;
 
-import com.foodconnect.dto.auth.UserProfileResponse;
 import com.foodconnect.dto.common.ApiResponse;
 import com.foodconnect.dto.common.PagedResponse;
-import com.foodconnect.enums.RoleName;
+import com.foodconnect.dto.response.UserResponse;
+import com.foodconnect.enums.UserRole;
 import com.foodconnect.mapper.UserMapper;
 import com.foodconnect.repository.UserRepository;
 import com.foodconnect.service.AdminService;
@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -41,20 +42,20 @@ public class AdminController {
 
     @GetMapping("/users")
     @Operation(summary = "List all registered users (optional role filter)")
-    public ResponseEntity<ApiResponse<PagedResponse<UserProfileResponse>>> getAllUsers(
-            @RequestParam(required = false) RoleName role,
+    public ResponseEntity<ApiResponse<PagedResponse<UserResponse>>> getAllUsers(
+            @RequestParam(required = false) UserRole role,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         
         Page<com.foodconnect.entity.User> userPage;
         if (role != null) {
-            userPage = userRepository.findByRole_Name(role, PageRequest.of(page, size));
+            userPage = userRepository.findByRole(role, PageRequest.of(page, size));
         } else {
             userPage = userRepository.findAll(PageRequest.of(page, size));
         }
 
-        List<UserProfileResponse> content = userPage.getContent().stream().map(userMapper::toProfileResponse).toList();
-        PagedResponse<UserProfileResponse> response = new PagedResponse<>(content, userPage.getNumber(), userPage.getSize(), userPage.getTotalElements(), userPage.getTotalPages(), userPage.isLast());
+        List<UserResponse> content = userPage.getContent().stream().map(userMapper::toResponse).toList();
+        PagedResponse<UserResponse> response = new PagedResponse<>(content, userPage.getNumber(), userPage.getSize(), userPage.getTotalElements(), userPage.getTotalPages(), userPage.isLast());
 
         return ResponseEntity.ok(ApiResponse.success("Users retrieved", response));
     }
@@ -62,7 +63,7 @@ public class AdminController {
     @PutMapping("/users/{userId}/toggle-status")
     @Operation(summary = "Activate or deactivate a user account")
     public ResponseEntity<ApiResponse<Void>> toggleUserStatus(
-            @PathVariable Long userId,
+            @PathVariable UUID userId,
             @RequestParam Boolean active) {
         userService.toggleUserStatus(userId, active);
         return ResponseEntity.ok(ApiResponse.success("User active status updated"));

@@ -1,12 +1,14 @@
 package com.foodconnect.service;
 
 import com.foodconnect.dto.common.PagedResponse;
-import com.foodconnect.dto.notification.NotificationDTO;
+import com.foodconnect.dto.response.NotificationResponse;
 import com.foodconnect.enums.NotificationType;
-import org.springframework.data.domain.Pageable;
+
+import java.util.UUID;
 
 public interface NotificationService {
-    NotificationDTO sendNotification(Long userId, String message, NotificationType type);
-    PagedResponse<NotificationDTO> getUserNotifications(Long userId, Pageable pageable);
-    void markAsRead(Long notificationId, Long userId);
+    NotificationResponse sendNotification(UUID userId, NotificationType type, String title, String message, String metadata);
+    PagedResponse<NotificationResponse> getUserNotifications(UUID userId, int page, int size);
+    void markAsRead(UUID notificationId, UUID userId);
+    long getUnreadCount(UUID userId);
 }

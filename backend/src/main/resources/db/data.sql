@@ -21,3 +21,11 @@ VALUES
 (3, 'Feeding India by Zomato', 'NGO', 'info@feedingindia.org', '+919811223344', 'Connaught Place, New Delhi 110001', 28.6315, 77.2167, TRUE),
 (4, 'No Food Waste India', 'NGO', 'feed@nofoodwaste.org', '+919444455555', 'T. Nagar, Chennai, Tamil Nadu 600017', 13.0418, 80.2341, TRUE)
 ON CONFLICT (id) DO NOTHING;
+
+-- 4. Sample Check-in records
+INSERT INTO check_ins (id, user_id, event_id, location, notes, status, checked_in_at)
+VALUES 
+(1, 1, 'EVT-COMMUNITY-DRIVE-01', 'MG Road Community Hub', 'Morning volunteer shift check-in', 'CHECKED_IN', CURRENT_TIMESTAMP - INTERVAL '2 hours'),
+(2, 1, 'EVT-DISTRIBUTION-HUB-02', 'Indira Nagar Distribution Center', 'Food inspection duty', 'CHECKED_IN', CURRENT_TIMESTAMP - INTERVAL '1 day')
+ON CONFLICT (id) DO NOTHING;
+

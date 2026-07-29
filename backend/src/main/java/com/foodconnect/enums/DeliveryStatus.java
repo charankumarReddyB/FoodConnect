@@ -1,8 +1,11 @@
 package com.foodconnect.enums;
 
 public enum DeliveryStatus {
+    UNASSIGNED,
     ASSIGNED,
-    IN_TRANSIT,
+    EN_ROUTE_PICKUP,
+    PICKED_UP,
+    EN_ROUTE_DELIVERY,
     DELIVERED,
     CANCELLED
 }

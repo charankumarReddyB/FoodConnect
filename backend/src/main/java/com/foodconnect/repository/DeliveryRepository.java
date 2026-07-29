@@ -8,10 +8,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
-    Optional<Delivery> findByDonationId(Long donationId);
-    Page<Delivery> findByVolunteerId(Long volunteerId, Pageable pageable);
+public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
+    Optional<Delivery> findByDonationId(UUID donationId);
+    Page<Delivery> findByVolunteerId(UUID volunteerId, Pageable pageable);
     Page<Delivery> findByStatus(DeliveryStatus status, Pageable pageable);
 }

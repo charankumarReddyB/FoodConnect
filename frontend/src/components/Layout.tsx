@@ -15,6 +15,8 @@ import {
   PlusCircle,
 } from 'lucide-react'
 
+import CheckInButton from './CheckInButton'
+
 type Screen =
   | 'landing'
   | 'onboarding'
@@ -112,13 +114,13 @@ export default function Layout({ children, screen, role, onNavigate, notifCount 
           </div>
         </div>
 
-        {/* User card */}
-        <div className="px-4 py-4 border-b border-border">
+        {/* User card + CheckIn Button */}
+        <div className="px-4 py-3.5 border-b border-border space-y-2">
           <div
-            className="flex items-center gap-3 p-3 rounded-xl cursor-pointer hover:bg-bg"
+            className="flex items-center gap-3 p-2.5 rounded-xl cursor-pointer hover:bg-bg"
             onClick={() => onNavigate('profile')}
           >
-            <div className={`w-10 h-10 rounded-full ${colors.bg} flex items-center justify-center text-white font-semibold text-sm font-poppins`}>
+            <div className={`w-9 h-9 rounded-full ${colors.bg} flex items-center justify-center text-white font-semibold text-sm font-poppins`}>
               {userName[role].charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
@@ -126,6 +128,9 @@ export default function Layout({ children, screen, role, onNavigate, notifCount 
               <p className="text-xs text-text-secondary">{roleLabels[role]}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-text-secondary" />
+          </div>
+          <div className="pt-1">
+            <CheckInButton variant="header" className="w-full justify-center" />
           </div>
         </div>
 

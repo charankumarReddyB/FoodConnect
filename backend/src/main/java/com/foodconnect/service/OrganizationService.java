@@ -1,12 +1,14 @@
 package com.foodconnect.service;
 
 import com.foodconnect.dto.common.PagedResponse;
-import com.foodconnect.dto.organization.OrganizationDTO;
-import org.springframework.data.domain.Pageable;
+import com.foodconnect.dto.response.OrganizationResponse;
+import com.foodconnect.enums.OrganizationType;
+
+import java.util.UUID;
 
 public interface OrganizationService {
-    OrganizationDTO registerOrganization(Long userId, OrganizationDTO dto);
-    OrganizationDTO verifyOrganization(Long orgId);
-    PagedResponse<OrganizationDTO> getOrganizations(Boolean verified, Pageable pageable);
-    OrganizationDTO getOrganizationById(Long id);
+    OrganizationResponse getOrganizationByUserId(UUID userId);
+    OrganizationResponse updateOrganizationCapacity(UUID userId, Integer capacityServings);
+    OrganizationResponse verifyOrganization(UUID organizationId, Boolean isVerified);
+    PagedResponse<OrganizationResponse> getOrganizations(OrganizationType orgType, Boolean isVerified, int page, int size);
 }

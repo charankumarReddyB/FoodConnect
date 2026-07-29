@@ -1,6 +1,6 @@
 package com.foodconnect.service.impl;
 
-import com.foodconnect.constants.AppConstants;
+import com.foodconnect.dto.common.PagedResponse;
 import com.foodconnect.dto.request.DonationCreateRequest;
 import com.foodconnect.dto.request.DonationUpdateRequest;
 import com.foodconnect.dto.response.DonationResponse;
@@ -8,18 +8,16 @@ import com.foodconnect.entity.Donation;
 import com.foodconnect.entity.FoodImage;
 import com.foodconnect.entity.User;
 import com.foodconnect.enums.DonationStatus;
-import com.foodconnect.enums.FoodCategory;
-import com.foodconnect.enums.VegNonVeg;
+import com.foodconnect.enums.FoodType;
 import com.foodconnect.exception.BadRequestException;
 import com.foodconnect.exception.ResourceNotFoundException;
 import com.foodconnect.exception.UnauthorizedException;
 import com.foodconnect.mapper.DonationMapper;
 import com.foodconnect.repository.DonationRepository;
-import com.foodconnect.repository.FoodImageRepository;
 import com.foodconnect.repository.UserRepository;
-import com.foodconnect.response.PagedResponse;
 import com.foodconnect.service.DonationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -29,33 +27,35 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class DonationServiceImpl implements DonationService {
 
     private final DonationRepository donationRepository;
     private final UserRepository userRepository;
-    private final FoodImageRepository foodImageRepository;
     private final DonationMapper donationMapper;
 
     @Override
     @Transactional
-    public DonationResponse createDonation(Long donorId, DonationCreateRequest request) {
+    public DonationResponse createDonation(UUID donorId, DonationCreateRequest request) {
+        log.info("Creating new donation post for donor ID: {}", donorId);
+
         User donor = userRepository.findById(donorId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", donorId));
+                .orElseThrow(() -> new ResourceNotFoundException("Donor not found with ID: " + donorId));
 
         Donation donation = Donation.builder()
                 .donor(donor)
-                .foodName(request.getFoodName())
+                .title(request.getTitle())
                 .description(request.getDescription())
-                .category(request.getCategory())
-                .vegNonVeg(request.getVegNonVeg())
-                .quantity(request.getQuantity())
+                .foodType(request.getFoodType())
+                .quantityDescription(request.getQuantityDescription())
                 .estimatedServings(request.getEstimatedServings())
                 .preparedTime(request.getPreparedTime())
-                .pickupDeadline(request.getPickupDeadline())
-                .address(request.getAddress())
+                .expiryTime(request.getExpiryTime())
+                .pickupAddress(request.getPickupAddress())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
                 .deliveryMethod(request.getDeliveryMethod())
@@ -64,64 +64,50 @@ public class DonationServiceImpl implements DonationService {
                 .build();
 
         if (request.getImageUrls() != null && !request.getImageUrls().isEmpty()) {
-            for (String url : request.getImageUrls()) {
+            for (int i = 0; i < request.getImageUrls().size(); i++) {
                 FoodImage img = FoodImage.builder()
                         .donation(donation)
-                        .imageUrl(url)
+                        .imageUrl(request.getImageUrls().get(i))
+                        .isPrimary(i == 0)
                         .build();
                 donation.getImages().add(img);
             }
         }
 
         Donation saved = donationRepository.save(donation);
+        log.info("Donation created successfully with ID: {}", saved.getId());
         return donationMapper.toResponse(saved);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public DonationResponse getDonationById(Long id, Double currentLat, Double currentLon) {
+    public DonationResponse getDonationById(UUID id) {
         Donation donation = donationRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Donation", "id", id));
-        return donationMapper.toResponse(donation, currentLat, currentLon);
+                .orElseThrow(() -> new ResourceNotFoundException("Donation not found with ID: " + id));
+        return donationMapper.toResponse(donation);
     }
 
     @Override
     @Transactional
-    public DonationResponse updateDonation(Long donationId, Long currentUserId, DonationUpdateRequest request) {
+    public DonationResponse updateDonation(UUID donationId, UUID currentUserId, DonationUpdateRequest request) {
         Donation donation = donationRepository.findById(donationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Donation", "id", donationId));
+                .orElseThrow(() -> new ResourceNotFoundException("Donation not found with ID: " + donationId));
 
         if (!donation.getDonor().getId().equals(currentUserId)) {
-            throw new UnauthorizedException("Only the donation owner can update this donation.");
+            throw new UnauthorizedException("Only the donation owner can update this post.");
         }
 
         if (donation.getStatus() == DonationStatus.COMPLETED || donation.getStatus() == DonationStatus.CANCELLED) {
-            throw new BadRequestException("Cannot update donation in status: " + donation.getStatus());
+            throw new BadRequestException("Cannot update donation in terminal status: " + donation.getStatus());
         }
 
-        if (request.getFoodName() != null) donation.setFoodName(request.getFoodName());
+        if (request.getFoodName() != null) donation.setTitle(request.getFoodName());
         if (request.getDescription() != null) donation.setDescription(request.getDescription());
-        if (request.getCategory() != null) donation.setCategory(request.getCategory());
-        if (request.getVegNonVeg() != null) donation.setVegNonVeg(request.getVegNonVeg());
-        if (request.getQuantity() != null) donation.setQuantity(request.getQuantity());
+        if (request.getQuantity() != null) donation.setQuantityDescription(request.getQuantity());
         if (request.getEstimatedServings() != null) donation.setEstimatedServings(request.getEstimatedServings());
-        if (request.getPreparedTime() != null) donation.setPreparedTime(request.getPreparedTime());
-        if (request.getPickupDeadline() != null) donation.setPickupDeadline(request.getPickupDeadline());
-        if (request.getAddress() != null) donation.setAddress(request.getAddress());
+        if (request.getAddress() != null) donation.setPickupAddress(request.getAddress());
         if (request.getLatitude() != null) donation.setLatitude(request.getLatitude());
         if (request.getLongitude() != null) donation.setLongitude(request.getLongitude());
-        if (request.getDeliveryMethod() != null) donation.setDeliveryMethod(request.getDeliveryMethod());
-
-        if (request.getImageUrls() != null) {
-            donation.getImages().clear();
-            for (String url : request.getImageUrls()) {
-                FoodImage img = FoodImage.builder()
-                        .donation(donation)
-                        .imageUrl(url)
-                        .build();
-                donation.getImages().add(img);
-            }
-        }
 
         Donation updated = donationRepository.save(donation);
         return donationMapper.toResponse(updated);
@@ -129,12 +115,12 @@ public class DonationServiceImpl implements DonationService {
 
     @Override
     @Transactional
-    public void deleteDonation(Long donationId, Long currentUserId) {
+    public void deleteDonation(UUID donationId, UUID currentUserId) {
         Donation donation = donationRepository.findById(donationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Donation", "id", donationId));
+                .orElseThrow(() -> new ResourceNotFoundException("Donation not found with ID: " + donationId));
 
         if (!donation.getDonor().getId().equals(currentUserId)) {
-            throw new UnauthorizedException("Only the donation owner can delete this donation.");
+            throw new UnauthorizedException("Only the donation owner can delete this post.");
         }
 
         donationRepository.delete(donation);
@@ -142,7 +128,7 @@ public class DonationServiceImpl implements DonationService {
 
     @Override
     @Transactional(readOnly = true)
-    public PagedResponse<DonationResponse> getMyDonations(Long donorId, int page, int size) {
+    public PagedResponse<DonationResponse> getMyDonations(UUID donorId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<Donation> pageResult = donationRepository.findByDonorId(donorId, pageable);
 
@@ -150,14 +136,14 @@ public class DonationServiceImpl implements DonationService {
                 .map(donationMapper::toResponse)
                 .toList();
 
-        return PagedResponse.<DonationResponse>builder()
-                .content(content)
-                .pageNumber(pageResult.getNumber())
-                .pageSize(pageResult.getSize())
-                .totalElements(pageResult.getTotalElements())
-                .totalPages(pageResult.getTotalPages())
-                .last(pageResult.isLast())
-                .build();
+        return new PagedResponse<>(
+                content,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages(),
+                pageResult.isLast()
+        );
     }
 
     @Override
@@ -170,53 +156,33 @@ public class DonationServiceImpl implements DonationService {
                 .map(donationMapper::toResponse)
                 .toList();
 
-        return PagedResponse.<DonationResponse>builder()
-                .content(content)
-                .pageNumber(pageResult.getNumber())
-                .pageSize(pageResult.getSize())
-                .totalElements(pageResult.getTotalElements())
-                .totalPages(pageResult.getTotalPages())
-                .last(pageResult.isLast())
-                .build();
+        return new PagedResponse<>(
+                content,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages(),
+                pageResult.isLast()
+        );
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<DonationResponse> getNearbyDonations(Double lat, Double lon, Double radiusKm, String category, String vegNonVeg) {
-        double radius = radiusKm != null ? radiusKm : AppConstants.DEFAULT_SEARCH_RADIUS_KM;
-        List<Donation> donations = donationRepository.findNearbyDonations(lat, lon, radius, DonationStatus.CREATED.name(), category, vegNonVeg);
+    public List<DonationResponse> getNearbyDonations(Double lat, Double lon, Double radiusKm, FoodType foodType) {
+        log.info("Fetching nearby donations for lat={}, lon={}, foodType={}", lat, lon, foodType);
+        Pageable pageable = PageRequest.of(0, 50);
+        Page<Donation> activePage = donationRepository.findActiveDonations(DonationStatus.CREATED, foodType, pageable);
 
-        return donations.stream()
-                .map(d -> donationMapper.toResponse(d, lat, lon))
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PagedResponse<DonationResponse> filterDonations(FoodCategory category, VegNonVeg vegNonVeg, DonationStatus status, int page, int size, String sortBy, String sortDir) {
-        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Donation> pageResult = donationRepository.filterDonations(category, vegNonVeg, status, pageable);
-
-        List<DonationResponse> content = pageResult.getContent().stream()
+        return activePage.getContent().stream()
                 .map(donationMapper::toResponse)
                 .toList();
-
-        return PagedResponse.<DonationResponse>builder()
-                .content(content)
-                .pageNumber(pageResult.getNumber())
-                .pageSize(pageResult.getSize())
-                .totalElements(pageResult.getTotalElements())
-                .totalPages(pageResult.getTotalPages())
-                .last(pageResult.isLast())
-                .build();
     }
 
     @Override
     @Transactional
-    public DonationResponse updateDonationStatus(Long donationId, DonationStatus status) {
+    public DonationResponse updateDonationStatus(UUID donationId, DonationStatus status) {
         Donation donation = donationRepository.findById(donationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Donation", "id", donationId));
+                .orElseThrow(() -> new ResourceNotFoundException("Donation not found with ID: " + donationId));
         donation.setStatus(status);
         Donation updated = donationRepository.save(donation);
         return donationMapper.toResponse(updated);

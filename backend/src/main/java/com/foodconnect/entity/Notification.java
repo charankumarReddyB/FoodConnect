@@ -5,10 +5,14 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Entity
-@Table(name = "notifications")
+@Table(name = "notifications", indexes = {
+    @Index(name = "idx_notifications_user_read", columnList = "user_id, is_read"),
+    @Index(name = "idx_notifications_created", columnList = "created_at DESC")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -17,25 +21,34 @@ import java.time.LocalDateTime;
 public class Notification {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private NotificationType type;
+
+    @Column(nullable = false, length = 255)
+    private String title;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 
     @Builder.Default
-    @Column(name = "read_status", nullable = false)
-    private Boolean readStatus = false;
+    @Column(name = "is_read", nullable = false)
+    private Boolean isRead = false;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "notification_type", nullable = false, length = 50)
-    private NotificationType notificationType;
+    @Column(name = "read_at")
+    private OffsetDateTime readAt;
+
+    @Column(columnDefinition = "jsonb")
+    private String metadata;
 
     @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime timestamp;
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
 }

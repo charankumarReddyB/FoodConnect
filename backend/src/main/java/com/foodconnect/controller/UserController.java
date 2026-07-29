@@ -1,16 +1,18 @@
 package com.foodconnect.controller;
 
-import com.foodconnect.dto.auth.UserProfileResponse;
-import com.foodconnect.dto.auth.UserUpdateRequest;
 import com.foodconnect.dto.common.ApiResponse;
-import com.foodconnect.security.UserPrincipal;
+import com.foodconnect.dto.request.LocationUpdateRequest;
+import com.foodconnect.dto.request.UserProfileUpdateRequest;
+import com.foodconnect.dto.response.UserResponse;
+import com.foodconnect.security.SecurityUtils;
 import com.foodconnect.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -22,27 +24,24 @@ public class UserController {
 
     @GetMapping("/{id}")
     @Operation(summary = "Get user profile by ID")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> getUserById(@PathVariable Long id) {
-        UserProfileResponse response = userService.getUserProfile(id);
-        return ResponseEntity.ok(ApiResponse.success("User retrieved", response));
+    public ResponseEntity<ApiResponse<UserResponse>> getUserById(@PathVariable UUID id) {
+        UserResponse response = userService.getUserById(id);
+        return ResponseEntity.ok(ApiResponse.success("User profile retrieved successfully", response));
     }
 
     @PutMapping("/profile")
     @Operation(summary = "Update logged-in user profile")
-    public ResponseEntity<ApiResponse<UserProfileResponse>> updateProfile(
-            @AuthenticationPrincipal UserPrincipal currentUser,
-            @RequestBody UserUpdateRequest updateRequest) {
-        UserProfileResponse response = userService.updateUserProfile(currentUser.getId(), updateRequest);
+    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(@RequestBody UserProfileUpdateRequest updateRequest) {
+        UUID authenticatedUserId = SecurityUtils.getCurrentUserId();
+        UserResponse response = userService.updateProfile(authenticatedUserId, updateRequest);
         return ResponseEntity.ok(ApiResponse.success("Profile updated successfully", response));
     }
 
     @PostMapping("/location")
     @Operation(summary = "Update user current geolocation coordinates")
-    public ResponseEntity<ApiResponse<Void>> updateLocation(
-            @AuthenticationPrincipal UserPrincipal currentUser,
-            @RequestParam Double latitude,
-            @RequestParam Double longitude) {
-        userService.updateUserLocation(currentUser.getId(), latitude, longitude);
-        return ResponseEntity.ok(ApiResponse.success("Location updated successfully"));
+    public ResponseEntity<ApiResponse<UserResponse>> updateLocation(@RequestBody LocationUpdateRequest locationRequest) {
+        UUID authenticatedUserId = SecurityUtils.getCurrentUserId();
+        UserResponse response = userService.updateLocation(authenticatedUserId, locationRequest);
+        return ResponseEntity.ok(ApiResponse.success("Location updated successfully", response));
     }
 }

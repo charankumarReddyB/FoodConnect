@@ -7,10 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface VolunteerRepository extends JpaRepository<Volunteer, Long> {
-    Optional<Volunteer> findByUserId(Long userId);
-    Boolean existsByUserId(Long userId);
-    Page<Volunteer> findByAvailability(Boolean availability, Pageable pageable);
+public interface VolunteerRepository extends JpaRepository<Volunteer, UUID> {
+    Optional<Volunteer> findByUserId(UUID userId);
+    Page<Volunteer> findByIsAvailable(Boolean isAvailable, Pageable pageable);
 }

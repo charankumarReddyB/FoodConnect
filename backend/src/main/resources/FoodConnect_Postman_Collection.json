@@ -1,0 +1,463 @@
+{
+	"info": {
+		"_postman_id": "a9e8d7c6-b5a4-3f2e-1d0c-9b8a7f6e5d4c",
+		"name": "FoodConnect v1.0 Master API Collection",
+		"description": "Production-ready Postman Collection for FoodConnect backend endpoints (JWT Auth, Donations, Check-ins, Logistics, Volunteers, Organizations, Admin)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080/api/v1",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "1. Register Donor User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Royal Caterers Bangalore\",\n  \"email\": \"donor@foodconnect.in\",\n  \"phone\": \"+919812345678\",\n  \"password\": \"DonorPassword@123\",\n  \"role\": \"DONOR\",\n  \"address\": \"Manpho Convention Center, Nagavara, Bengaluru 560045\",\n  \"latitude\": 13.0418,\n  \"longitude\": 77.6186\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Register NGO Recipient User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Indiranagar Food Shelter\",\n  \"email\": \"ngo@foodconnect.in\",\n  \"phone\": \"+919876543211\",\n  \"password\": \"NgoPassword@123\",\n  \"role\": \"NGO\",\n  \"address\": \"100 Feet Road, Indiranagar, Bengaluru 560038\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946,\n  \"organizationName\": \"Indiranagar Care Center\",\n  \"registrationNumber\": \"NGO-BLR-2026-88\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "3. Register Volunteer User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"Rahul Volunteer Sharma\",\n  \"email\": \"volunteer@foodconnect.in\",\n  \"phone\": \"+919811122233\",\n  \"password\": \"VolunteerPassword@123\",\n  \"role\": \"VOLUNTEER\",\n  \"vehicleType\": \"MOTORCYCLE\",\n  \"latitude\": 12.9716,\n  \"longitude\": 77.5946\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "4. Login User (Auto-saves Access Token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.accessToken) {",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@foodconnect.in\",\n  \"password\": \"Admin@123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "5. Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/refresh-token",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"refresh-token"
+							]
+						}
+					}
+				},
+				{
+					"name": "6. Get Authenticated User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Donations",
+			"item": [
+				{
+					"name": "1. Post New Food Donation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Catered Vegetable Biryani & Sweets (60 Servings)\",\n  \"description\": \"Clean surplus vegetarian biryani from corporate lunch event. Packed in sealed foil trays.\",\n  \"foodType\": \"VEG\",\n  \"quantityDescription\": \"3 Large Foil Trays (approx 18kg)\",\n  \"estimatedServings\": 60,\n  \"preparedTime\": \"2026-07-29T10:00:00Z\",\n  \"expiryTime\": \"2026-07-29T19:00:00Z\",\n  \"pickupAddress\": \"Manyata Tech Park, Nagavara, Bengaluru 560045\",\n  \"latitude\": 13.0450,\n  \"longitude\": 77.6200,\n  \"deliveryMethod\": \"VOLUNTEER_DELIVERY\",\n  \"imageUrls\": [\n    \"https://images.foodconnect.org/donations/biryani_1.jpg\"\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/donations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"donations"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Search Nearby Active Donations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/donations/nearby?latitude=12.9716&longitude=77.5946&radiusKm=20.0&foodType=VEG",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"donations",
+								"nearby"
+							],
+							"query": [
+								{
+									"key": "latitude",
+									"value": "12.9716"
+								},
+								{
+									"key": "longitude",
+									"value": "77.5946"
+								},
+								{
+									"key": "radiusKm",
+									"value": "20.0"
+								},
+								{
+									"key": "foodType",
+									"value": "VEG"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "3. Get Donations by Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/donations?status=CREATED&page=0&size=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"donations"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "CREATED"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Check-ins",
+			"item": [
+				{
+					"name": "1. Perform Daily User Check-in",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"location\": \"Indiranagar Distribution Hub\",\n  \"eventId\": \"EVT-BLR-MORNING\",\n  \"notes\": \"Checked in for morning shift food dispatch\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/checkin",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"checkin"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Get Current Check-in Status",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/checkin/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"checkin",
+								"status"
+							]
+						}
+					}
+				},
+				{
+					"name": "3. Admin List All Check-in Records",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/checkins?status=CHECKED_IN&page=0&size=20",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"checkins"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "CHECKED_IN"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "20"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Console",
+			"item": [
+				{
+					"name": "1. Get Dashboard Platform Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"stats"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Admin List All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/admin/users?role=VOLUNTEER&page=0&size=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"admin",
+								"users"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "VOLUNTEER"
+								},
+								{
+									"key": "page",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}

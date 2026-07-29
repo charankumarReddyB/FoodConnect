@@ -2,61 +2,61 @@ package com.foodconnect.controller;
 
 import com.foodconnect.dto.common.ApiResponse;
 import com.foodconnect.dto.common.PagedResponse;
-import com.foodconnect.dto.organization.OrganizationDTO;
-import com.foodconnect.security.UserPrincipal;
+import com.foodconnect.dto.response.OrganizationResponse;
+import com.foodconnect.enums.OrganizationType;
+import com.foodconnect.security.SecurityUtils;
 import com.foodconnect.service.OrganizationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/organizations")
 @RequiredArgsConstructor
-@Tag(name = "Organizations", description = "Endpoints for registering and managing NGOs, orphanages, and shelters")
+@Tag(name = "Organizations", description = "Endpoints for NGO, Shelter, and Orphanage profile management")
 public class OrganizationController {
 
     private final OrganizationService organizationService;
 
-    @PostMapping
-    @Operation(summary = "Register an organization (NGO / Orphanage / Old Age Home / Shelter)")
-    public ResponseEntity<ApiResponse<OrganizationDTO>> registerOrganization(
-            @AuthenticationPrincipal UserPrincipal currentUser,
-            @Valid @RequestBody OrganizationDTO dto) {
-        Long userId = currentUser != null ? currentUser.getId() : null;
-        OrganizationDTO response = organizationService.registerOrganization(userId, dto);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.success("Organization registered successfully", response));
+    @GetMapping("/me")
+    @Operation(summary = "Get current authenticated organization profile")
+    public ResponseEntity<ApiResponse<OrganizationResponse>> getMyOrganizationProfile() {
+        UUID authenticatedUserId = SecurityUtils.getCurrentUserId();
+        OrganizationResponse response = organizationService.getOrganizationByUserId(authenticatedUserId);
+        return ResponseEntity.ok(ApiResponse.success("Organization profile retrieved", response));
+    }
+
+    @PatchMapping("/capacity")
+    @Operation(summary = "Update organization serving capacity")
+    public ResponseEntity<ApiResponse<OrganizationResponse>> updateCapacity(@RequestParam Integer capacityServings) {
+        UUID authenticatedUserId = SecurityUtils.getCurrentUserId();
+        OrganizationResponse response = organizationService.updateOrganizationCapacity(authenticatedUserId, capacityServings);
+        return ResponseEntity.ok(ApiResponse.success("Capacity updated successfully", response));
     }
 
     @GetMapping
-    @Operation(summary = "List organizations (optional verified filter)")
-    public ResponseEntity<ApiResponse<PagedResponse<OrganizationDTO>>> getOrganizations(
-            @RequestParam(required = false) Boolean verified,
+    @Operation(summary = "List registered organizations (optional type & verification filters)")
+    public ResponseEntity<ApiResponse<PagedResponse<OrganizationResponse>>> getOrganizations(
+            @RequestParam(required = false) OrganizationType orgType,
+            @RequestParam(required = false) Boolean isVerified,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        PagedResponse<OrganizationDTO> response = organizationService.getOrganizations(verified, PageRequest.of(page, size));
-        return ResponseEntity.ok(ApiResponse.success("Organizations fetched", response));
+        PagedResponse<OrganizationResponse> response = organizationService.getOrganizations(orgType, isVerified, page, size);
+        return ResponseEntity.ok(ApiResponse.success("Organizations retrieved successfully", response));
     }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get organization details by ID")
-    public ResponseEntity<ApiResponse<OrganizationDTO>> getOrganizationById(@PathVariable Long id) {
-        OrganizationDTO response = organizationService.getOrganizationById(id);
-        return ResponseEntity.ok(ApiResponse.success("Organization fetched", response));
-    }
-
-    @PutMapping("/{id}/verify")
+    @PatchMapping("/{organizationId}/verify")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Verify an organization (Admin only)")
-    public ResponseEntity<ApiResponse<OrganizationDTO>> verifyOrganization(@PathVariable Long id) {
-        OrganizationDTO response = organizationService.verifyOrganization(id);
-        return ResponseEntity.ok(ApiResponse.success("Organization verified successfully", response));
+    @Operation(summary = "Admin: Verify an organization")
+    public ResponseEntity<ApiResponse<OrganizationResponse>> verifyOrganization(
+            @PathVariable UUID organizationId,
+            @RequestParam(defaultValue = "true") Boolean isVerified) {
+        OrganizationResponse response = organizationService.verifyOrganization(organizationId, isVerified);
+        return ResponseEntity.ok(ApiResponse.success("Organization verification status updated", response));
     }
 }

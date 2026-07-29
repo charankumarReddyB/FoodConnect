@@ -6,17 +6,23 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.UUID;
 
 @Data
 @Builder
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class DonationRequestResponse {
-    private Long id;
-    private DonationResponse donation;
-    private UserResponse recipient;
+    private UUID id;
+    private UUID donationId;
+    private String donationTitle;
+    private UUID recipientId;
+    private String recipientOrganizationName;
     private RequestStatus status;
-    private LocalDateTime requestTime;
-    private LocalDateTime approvalTime;
+    private Integer requestedServings;
+    private String notes;
+    private OffsetDateTime requestTime;
+    private OffsetDateTime responseTime;
+    private OffsetDateTime createdAt;
 }

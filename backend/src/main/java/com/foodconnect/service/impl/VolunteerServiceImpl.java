@@ -1,17 +1,13 @@
 package com.foodconnect.service.impl;
 
-import com.foodconnect.dto.request.VolunteerRegisterRequest;
+import com.foodconnect.dto.common.PagedResponse;
 import com.foodconnect.dto.response.VolunteerResponse;
-import com.foodconnect.entity.User;
 import com.foodconnect.entity.Volunteer;
-import com.foodconnect.exception.DuplicateResourceException;
 import com.foodconnect.exception.ResourceNotFoundException;
-import com.foodconnect.mapper.VolunteerMapper;
-import com.foodconnect.repository.UserRepository;
 import com.foodconnect.repository.VolunteerRepository;
-import com.foodconnect.response.PagedResponse;
 import com.foodconnect.service.VolunteerService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,80 +15,89 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VolunteerServiceImpl implements VolunteerService {
 
     private final VolunteerRepository volunteerRepository;
-    private final UserRepository userRepository;
-    private final VolunteerMapper volunteerMapper;
+
+    @Override
+    @Transactional(readOnly = true)
+    public VolunteerResponse getVolunteerByUserId(UUID userId) {
+        Volunteer volunteer = volunteerRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Volunteer profile not found for user ID: " + userId));
+        return mapToResponse(volunteer);
+    }
 
     @Override
     @Transactional
-    public VolunteerResponse registerVolunteer(Long userId, VolunteerRegisterRequest request) {
-        if (volunteerRepository.existsByUserId(userId)) {
-            throw new DuplicateResourceException("User is already registered as a volunteer.");
+    public VolunteerResponse toggleAvailability(UUID userId, Boolean isAvailable) {
+        log.info("Toggling availability to {} for volunteer user ID {}", isAvailable, userId);
+
+        Volunteer volunteer = volunteerRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Volunteer profile not found for user ID: " + userId));
+
+        volunteer.setIsAvailable(isAvailable != null ? isAvailable : !volunteer.getIsAvailable());
+        Volunteer updated = volunteerRepository.save(volunteer);
+        return mapToResponse(updated);
+    }
+
+    @Override
+    @Transactional
+    public VolunteerResponse updateLocation(UUID userId, Double lat, Double lon) {
+        Volunteer volunteer = volunteerRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Volunteer profile not found for user ID: " + userId));
+
+        volunteer.setCurrentLatitude(lat);
+        volunteer.setCurrentLongitude(lon);
+        Volunteer updated = volunteerRepository.save(volunteer);
+        return mapToResponse(updated);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PagedResponse<VolunteerResponse> getAllVolunteers(Boolean isAvailable, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Volunteer> pageResult;
+
+        if (isAvailable != null) {
+            pageResult = volunteerRepository.findByIsAvailable(isAvailable, pageable);
+        } else {
+            pageResult = volunteerRepository.findAll(pageable);
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User", "id", userId));
-
-        Volunteer volunteer = Volunteer.builder()
-                .user(user)
-                .vehicleType(request.getVehicleType())
-                .availability(request.getAvailability() != null ? request.getAvailability() : true)
-                .rating(5.0)
-                .completedDeliveries(0)
-                .build();
-
-        Volunteer saved = volunteerRepository.save(volunteer);
-        return volunteerMapper.toResponse(saved);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public VolunteerResponse getVolunteerById(Long id) {
-        Volunteer volunteer = volunteerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Volunteer", "id", id));
-        return volunteerMapper.toResponse(volunteer);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public VolunteerResponse getVolunteerByUserId(Long userId) {
-        Volunteer volunteer = volunteerRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Volunteer", "userId", userId));
-        return volunteerMapper.toResponse(volunteer);
-    }
-
-    @Override
-    @Transactional
-    public VolunteerResponse updateAvailability(Long userId, boolean availability) {
-        Volunteer volunteer = volunteerRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Volunteer", "userId", userId));
-        volunteer.setAvailability(availability);
-        Volunteer updated = volunteerRepository.save(volunteer);
-        return volunteerMapper.toResponse(updated);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public PagedResponse<VolunteerResponse> getAvailableVolunteers(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Volunteer> pageResult = volunteerRepository.findByAvailability(true, pageable);
-
         List<VolunteerResponse> content = pageResult.getContent().stream()
-                .map(volunteerMapper::toResponse)
+                .map(this::mapToResponse)
                 .toList();
 
-        return PagedResponse.<VolunteerResponse>builder()
-                .content(content)
-                .pageNumber(pageResult.getNumber())
-                .pageSize(pageResult.getSize())
-                .totalElements(pageResult.getTotalElements())
-                .totalPages(pageResult.getTotalPages())
-                .last(pageResult.isLast())
+        return new PagedResponse<>(
+                content,
+                pageResult.getNumber(),
+                pageResult.getSize(),
+                pageResult.getTotalElements(),
+                pageResult.getTotalPages(),
+                pageResult.isLast()
+        );
+    }
+
+    private VolunteerResponse mapToResponse(Volunteer v) {
+        return VolunteerResponse.builder()
+                .id(v.getId())
+                .userId(v.getUser() != null ? v.getUser().getId() : null)
+                .fullName(v.getUser() != null ? v.getUser().getFullName() : null)
+                .email(v.getUser() != null ? v.getUser().getEmail() : null)
+                .phone(v.getUser() != null ? v.getUser().getPhone() : null)
+                .vehicleType(v.getVehicleType())
+                .licenseNumber(v.getLicenseNumber())
+                .isAvailable(v.getIsAvailable())
+                .currentLatitude(v.getCurrentLatitude())
+                .currentLongitude(v.getCurrentLongitude())
+                .rating(v.getRating())
+                .completedDeliveriesCount(v.getCompletedDeliveriesCount())
+                .createdAt(v.getCreatedAt())
                 .build();
     }
 }

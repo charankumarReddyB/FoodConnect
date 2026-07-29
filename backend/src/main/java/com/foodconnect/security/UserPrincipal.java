@@ -1,7 +1,7 @@
 package com.foodconnect.security;
 
-import com.foodconnect.entity.User;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.foodconnect.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
@@ -11,12 +11,13 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 @AllArgsConstructor
 @Getter
 public class UserPrincipal implements UserDetails {
 
-    private Long id;
+    private UUID id;
     private String name;
     private String email;
     @JsonIgnore
@@ -26,16 +27,16 @@ public class UserPrincipal implements UserDetails {
 
     public static UserPrincipal create(User user) {
         List<GrantedAuthority> authorities = Collections.singletonList(
-                new SimpleGrantedAuthority("ROLE_" + user.getRole().getName().name())
+                new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
         );
 
         return new UserPrincipal(
                 user.getId(),
-                user.getName(),
+                user.getFullName(),
                 user.getEmail(),
-                user.getPassword(),
+                user.getPasswordHash(),
                 authorities,
-                user.getActive()
+                user.getIsActive()
         );
     }
 
