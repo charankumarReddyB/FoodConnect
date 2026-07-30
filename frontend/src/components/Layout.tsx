@@ -15,6 +15,7 @@ import {
   PlusCircle,
 } from 'lucide-react'
 
+import Logo from './Logo'
 import CheckInButton from './CheckInButton'
 
 type Screen =
@@ -73,10 +74,10 @@ const navItems: Record<Role, { icon: React.ElementType; label: string; screen: S
 }
 
 const roleColors: Record<Role, { bg: string; text: string; light: string }> = {
-  donor: { bg: 'bg-primary', text: 'text-white', light: 'bg-primary-50' },
-  recipient: { bg: 'bg-[#1565C0]', text: 'text-white', light: 'bg-[#E3F2FD]' },
-  volunteer: { bg: 'bg-[#6A1B9A]', text: 'text-white', light: 'bg-[#F3E5F5]' },
-  admin: { bg: 'bg-[#B71C1C]', text: 'text-white', light: 'bg-[#FFEBEE]' },
+  donor: { bg: 'bg-gradient-primary', text: 'text-white', light: 'bg-emerald-50 text-emerald-800' },
+  recipient: { bg: 'bg-gradient-to-r from-blue-600 to-indigo-600', text: 'text-white', light: 'bg-blue-50 text-blue-800' },
+  volunteer: { bg: 'bg-gradient-to-r from-purple-600 to-indigo-600', text: 'text-white', light: 'bg-purple-50 text-purple-800' },
+  admin: { bg: 'bg-gradient-to-r from-rose-600 to-red-600', text: 'text-white', light: 'bg-rose-50 text-rose-800' },
 }
 
 const roleLabels: Record<Role, string> = {
@@ -100,18 +101,10 @@ export default function Layout({ children, screen, role, onNavigate, notifCount 
   return (
     <div className="flex min-h-screen bg-bg font-inter">
       {/* Sidebar — desktop only */}
-      <aside className="hidden lg:flex flex-col w-64 bg-surface border-r border-border fixed top-0 left-0 h-screen z-20">
+      <aside className="hidden lg:flex flex-col w-64 bg-surface/90 backdrop-blur-xl border-r border-border fixed top-0 left-0 h-screen z-20 shadow-sm">
         {/* Logo */}
         <div className="px-6 py-5 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
-              <Heart className="w-5 h-5 text-white fill-white" />
-            </div>
-            <div>
-              <p className="text-[15px] font-bold text-text-primary font-poppins leading-none">FoodConnect</p>
-              <p className="text-[10px] text-text-secondary mt-0.5">Reduce Waste. Feed Lives.</p>
-            </div>
-          </div>
+          <Logo size="md" variant="full" />
         </div>
 
         {/* User card + CheckIn Button */}

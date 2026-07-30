@@ -15,6 +15,7 @@ import Profile from './screens/Profile'
 import History from './screens/History'
 import Settings from './screens/Settings'
 import Layout from './components/Layout'
+import SplashScreen from './components/SplashScreen'
 
 type Screen =
   | 'landing'
@@ -55,8 +56,13 @@ const AUTHED_SCREENS: Screen[] = [
 ]
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true)
   const [screen, setScreen] = useState<Screen>('landing')
   const [role, setRole] = useState<Role>('donor')
+
+  if (showSplash) {
+    return <SplashScreen onComplete={() => setShowSplash(false)} />
+  }
 
   const isAuthed = AUTHED_SCREENS.includes(screen)
 

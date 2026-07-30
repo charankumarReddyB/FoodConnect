@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Heart, Eye, EyeOff, ArrowLeft, Phone, Mail, Lock, User } from 'lucide-react'
+import Logo from '../components/Logo'
 
 type Role = 'donor' | 'recipient' | 'volunteer' | 'admin'
 
@@ -10,10 +11,10 @@ interface AuthProps {
 }
 
 const roleConfig: Record<Role, { label: string; color: string; bg: string }> = {
-  donor: { label: 'Food Donor', color: 'bg-primary', bg: 'bg-primary-50 text-primary' },
-  recipient: { label: 'Recipient Org', color: 'bg-[#1565C0]', bg: 'bg-[#E3F2FD] text-[#1565C0]' },
-  volunteer: { label: 'Volunteer', color: 'bg-[#6A1B9A]', bg: 'bg-[#F3E5F5] text-[#6A1B9A]' },
-  admin: { label: 'Administrator', color: 'bg-[#B71C1C]', bg: 'bg-[#FFEBEE] text-[#B71C1C]' },
+  donor: { label: 'Food Donor', color: 'bg-gradient-primary', bg: 'bg-emerald-50 text-emerald-800' },
+  recipient: { label: 'Recipient Org', color: 'bg-gradient-to-r from-blue-600 to-indigo-600', bg: 'bg-blue-50 text-blue-800' },
+  volunteer: { label: 'Volunteer', color: 'bg-gradient-to-r from-purple-600 to-indigo-600', bg: 'bg-purple-50 text-purple-800' },
+  admin: { label: 'Administrator', color: 'bg-gradient-to-r from-rose-600 to-red-600', bg: 'bg-rose-50 text-rose-800' },
 }
 
 export default function Auth({ role, onSuccess, onBack }: AuthProps) {
@@ -34,28 +35,23 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
   }
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center px-6 py-12 font-inter">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-bg flex items-center justify-center px-6 py-12 font-inter bg-gradient-hero">
+      <div className="w-full max-w-md animate-scale-in">
         {/* Back */}
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-sm text-text-secondary hover:text-text-primary mb-8 font-medium"
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 mb-8 font-semibold cursor-pointer btn-press"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
 
         {/* Card */}
-        <div className="bg-surface rounded-3xl border border-border shadow-xl p-8">
+        <div className="bg-surface/90 backdrop-blur-xl rounded-3xl border border-slate-200 shadow-xl p-8">
           {/* Logo + role badge */}
           <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className={`w-10 h-10 rounded-xl ${cfg.color} flex items-center justify-center shadow-sm`}>
-                <Heart className="w-5 h-5 text-white fill-white" />
-              </div>
-              <span className="text-lg font-bold text-text-primary font-poppins">FoodConnect</span>
-            </div>
-            <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${cfg.bg}`}>
+            <Logo size="sm" variant="full" />
+            <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${cfg.bg}`}>
               {cfg.label}
             </span>
           </div>

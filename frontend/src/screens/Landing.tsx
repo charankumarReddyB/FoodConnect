@@ -1,4 +1,5 @@
 import { Heart, MapPin, Leaf, Users, ArrowRight, CheckCircle, Star, TrendingUp } from 'lucide-react'
+import Logo from '../components/Logo'
 
 interface LandingProps {
   onGetStarted: () => void
@@ -72,12 +73,7 @@ export default function Landing({ onGetStarted, onLogin }: LandingProps) {
       {/* Header */}
       <header className="sticky top-0 bg-surface/95 backdrop-blur-sm border-b border-border z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-              <Heart className="w-5 h-5 text-white fill-white" />
-            </div>
-            <span className="text-lg font-bold text-text-primary font-poppins">FoodConnect</span>
-          </div>
+          <Logo size="md" variant="full" />
           <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm text-text-secondary hover:text-text-primary font-medium">Features</a>
             <a href="#how-it-works" className="text-sm text-text-secondary hover:text-text-primary font-medium">How It Works</a>

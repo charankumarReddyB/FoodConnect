@@ -344,9 +344,99 @@ CREATE INDEX IF NOT EXISTS idx_deliveries_status ON deliveries(status);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
 CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(created_at DESC);
 
--- Indexes on Check Ins
-CREATE INDEX IF NOT EXISTS idx_checkins_user ON check_ins(user_id);
-CREATE INDEX IF NOT EXISTS idx_checkins_timestamp ON check_ins(checked_in_at DESC);
+-- ----------------------------------------------------------------------------
+-- 4.5 ROW LEVEL SECURITY (RLS) & POLICIES
+-- ----------------------------------------------------------------------------
+
+-- Enable Row Level Security (RLS) on all 9 tables
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE donations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE food_images ENABLE ROW LEVEL SECURITY;
+ALTER TABLE donation_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE volunteers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deliveries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE check_ins ENABLE ROW LEVEL SECURITY;
+
+-- 1. USERS POLICIES
+DROP POLICY IF EXISTS "Public users view active profiles" ON users;
+CREATE POLICY "Public users view active profiles" ON users FOR SELECT USING (is_active = TRUE);
+
+DROP POLICY IF EXISTS "Users update own profile" ON users;
+CREATE POLICY "Users update own profile" ON users FOR UPDATE USING (auth.uid() = id);
+
+DROP POLICY IF EXISTS "Service role full access on users" ON users;
+CREATE POLICY "Service role full access on users" ON users USING (true) WITH CHECK (true);
+
+-- 2. ORGANIZATIONS POLICIES
+DROP POLICY IF EXISTS "Anyone view verified organizations" ON organizations;
+CREATE POLICY "Anyone view verified organizations" ON organizations FOR SELECT USING (is_verified = TRUE);
+
+DROP POLICY IF EXISTS "Owners manage their organization" ON organizations;
+CREATE POLICY "Owners manage their organization" ON organizations FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Service role full access on organizations" ON organizations;
+CREATE POLICY "Service role full access on organizations" ON organizations USING (true) WITH CHECK (true);
+
+-- 3. DONATIONS POLICIES
+DROP POLICY IF EXISTS "Anyone view active donations" ON donations;
+CREATE POLICY "Anyone view active donations" ON donations FOR SELECT USING (status IN ('CREATED', 'REQUESTED', 'ACCEPTED', 'ASSIGNED', 'PICKED_UP', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED'));
+
+DROP POLICY IF EXISTS "Donors manage own donations" ON donations;
+CREATE POLICY "Donors manage own donations" ON donations FOR ALL USING (auth.uid() = donor_id);
+
+DROP POLICY IF EXISTS "Service role full access on donations" ON donations;
+CREATE POLICY "Service role full access on donations" ON donations USING (true) WITH CHECK (true);
+
+-- 4. FOOD IMAGES POLICIES
+DROP POLICY IF EXISTS "Anyone view food images" ON food_images;
+CREATE POLICY "Anyone view food images" ON food_images FOR SELECT USING (true);
+
+DROP POLICY IF EXISTS "Service role full access on food_images" ON food_images;
+CREATE POLICY "Service role full access on food_images" ON food_images USING (true) WITH CHECK (true);
+
+-- 5. DONATION REQUESTS POLICIES
+DROP POLICY IF EXISTS "Recipients view and manage requests" ON donation_requests;
+CREATE POLICY "Recipients view and manage requests" ON donation_requests FOR ALL USING (
+    recipient_id IN (SELECT id FROM organizations WHERE user_id = auth.uid())
+);
+
+DROP POLICY IF EXISTS "Service role full access on donation_requests" ON donation_requests;
+CREATE POLICY "Service role full access on donation_requests" ON donation_requests USING (true) WITH CHECK (true);
+
+-- 6. VOLUNTEERS POLICIES
+DROP POLICY IF EXISTS "Anyone view available volunteers" ON volunteers;
+CREATE POLICY "Anyone view available volunteers" ON volunteers FOR SELECT USING (is_available = TRUE);
+
+DROP POLICY IF EXISTS "Volunteers manage own profile" ON volunteers;
+CREATE POLICY "Volunteers manage own profile" ON volunteers FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Service role full access on volunteers" ON volunteers;
+CREATE POLICY "Service role full access on volunteers" ON volunteers USING (true) WITH CHECK (true);
+
+-- 7. DELIVERIES POLICIES
+DROP POLICY IF EXISTS "Volunteers view assigned deliveries" ON deliveries;
+CREATE POLICY "Volunteers view assigned deliveries" ON deliveries FOR SELECT USING (
+    volunteer_id IN (SELECT id FROM volunteers WHERE user_id = auth.uid())
+);
+
+DROP POLICY IF EXISTS "Service role full access on deliveries" ON deliveries;
+CREATE POLICY "Service role full access on deliveries" ON deliveries USING (true) WITH CHECK (true);
+
+-- 8. NOTIFICATIONS POLICIES
+DROP POLICY IF EXISTS "Users view own notifications" ON notifications;
+CREATE POLICY "Users view own notifications" ON notifications FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Service role full access on notifications" ON notifications;
+CREATE POLICY "Service role full access on notifications" ON notifications USING (true) WITH CHECK (true);
+
+-- 9. CHECK INS POLICIES
+DROP POLICY IF EXISTS "Users view own check ins" ON check_ins;
+CREATE POLICY "Users view own check ins" ON check_ins FOR ALL USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Service role full access on check_ins" ON check_ins;
+CREATE POLICY "Service role full access on check_ins" ON check_ins USING (true) WITH CHECK (true);
 
 -- ----------------------------------------------------------------------------
 -- 5. SAMPLE SEED DATA
