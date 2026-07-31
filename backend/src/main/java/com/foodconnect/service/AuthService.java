@@ -1,11 +1,11 @@
 package com.foodconnect.service;
 
-import com.foodconnect.dto.request.LoginRequest;
-import com.foodconnect.dto.request.RefreshTokenRequest;
-import com.foodconnect.dto.request.RegisterRequest;
+import com.foodconnect.dto.request.*;
 import com.foodconnect.dto.response.JwtAuthResponse;
 import com.foodconnect.dto.response.RefreshTokenResponse;
 import com.foodconnect.dto.response.UserResponse;
+
+import java.util.Map;
 
 public interface AuthService {
     UserResponse register(RegisterRequest request);
@@ -13,4 +13,12 @@ public interface AuthService {
     RefreshTokenResponse refreshToken(RefreshTokenRequest request);
     UserResponse getCurrentUser();
     void logout(String token);
+
+    // Enhanced Auth Options
+    JwtAuthResponse googleAuth(GoogleAuthRequest request);
+    Map<String, Object> sendPhoneOtp(SendOtpRequest request);
+    JwtAuthResponse verifyPhoneOtp(VerifyOtpRequest request);
+    Map<String, Object> forgotPassword(ForgotPasswordRequest request);
+    Map<String, Object> resetPassword(ResetPasswordRequest request);
+    UserResponse linkAccount(LinkAccountRequest request);
 }

@@ -32,7 +32,10 @@ public class User {
     @Column(unique = true, length = 30)
     private String phone;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "google_id", unique = true, length = 255)
+    private String googleId;
+
+    @Column(name = "password_hash", nullable = true)
     private String passwordHash;
 
     @Column(name = "full_name", nullable = false, length = 150)
@@ -60,6 +63,13 @@ public class User {
     @Builder.Default
     @Column(name = "email_verified", nullable = false)
     private Boolean emailVerified = false;
+
+    @Builder.Default
+    @Column(name = "phone_verified", nullable = false)
+    private Boolean phoneVerified = false;
+
+    @Column(name = "auth_providers")
+    private String authProviders;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

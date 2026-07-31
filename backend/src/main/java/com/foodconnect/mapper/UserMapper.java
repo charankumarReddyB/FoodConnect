@@ -20,8 +20,11 @@ public class UserMapper {
                 .address(user.getAddress())
                 .latitude(user.getLatitude())
                 .longitude(user.getLongitude())
+                .googleId(user.getGoogleId())
                 .isActive(user.getIsActive())
                 .emailVerified(user.getEmailVerified())
+                .phoneVerified(user.getPhoneVerified())
+                .authProviders(user.getAuthProviders())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

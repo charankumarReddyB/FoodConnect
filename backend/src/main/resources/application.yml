@@ -25,6 +25,12 @@ app:
     allowed-origins: "*"
     allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
     allowed-headers: "*"
+  sms:
+    enabled: true
+    provider: TWILIO
+    account-sid: ${TWILIO_ACCOUNT_SID:AC_MOCK_TWILIO_ACCOUNT_SID}
+    auth-token: ${TWILIO_AUTH_TOKEN:MOCK_TWILIO_AUTH_TOKEN}
+    from-number: ${TWILIO_FROM_NUMBER:+15005550006}
 
 springdoc:
   api-docs:

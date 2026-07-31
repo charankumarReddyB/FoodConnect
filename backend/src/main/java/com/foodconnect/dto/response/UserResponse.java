@@ -23,7 +23,10 @@ public class UserResponse {
     private String address;
     private Double latitude;
     private Double longitude;
+    private String googleId;
     private Boolean isActive;
     private Boolean emailVerified;
+    private Boolean phoneVerified;
+    private String authProviders;
     private OffsetDateTime createdAt;
 }

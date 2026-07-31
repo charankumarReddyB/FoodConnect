@@ -1,9 +1,7 @@
 package com.foodconnect.controller;
 
 import com.foodconnect.dto.common.ApiResponse;
-import com.foodconnect.dto.request.LoginRequest;
-import com.foodconnect.dto.request.RefreshTokenRequest;
-import com.foodconnect.dto.request.RegisterRequest;
+import com.foodconnect.dto.request.*;
 import com.foodconnect.dto.response.JwtAuthResponse;
 import com.foodconnect.dto.response.RefreshTokenResponse;
 import com.foodconnect.dto.response.UserResponse;
@@ -16,10 +14,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication", description = "Endpoints for user registration, authentication, and profile retrieval")
+@Tag(name = "Authentication", description = "Endpoints for user registration, authentication, Google Sign-In, Phone OTP, and profile retrieval")
 public class AuthController {
 
     private final AuthService authService;
@@ -33,10 +33,52 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "User Login and JWT Generation")
+    @Operation(summary = "User Email/Password Login and JWT Generation")
     public ResponseEntity<ApiResponse<JwtAuthResponse>> login(@Valid @RequestBody LoginRequest loginRequest) {
         JwtAuthResponse response = authService.login(loginRequest);
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
+    }
+
+    @PostMapping("/google")
+    @Operation(summary = "Authenticate or register user with Google OAuth ID Token/Profile")
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> googleAuth(@Valid @RequestBody GoogleAuthRequest googleRequest) {
+        JwtAuthResponse response = authService.googleAuth(googleRequest);
+        return ResponseEntity.ok(ApiResponse.success("Google authentication successful", response));
+    }
+
+    @PostMapping("/otp/send")
+    @Operation(summary = "Send OTP to mobile number with rate limiting and cooldown enforcement")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> sendPhoneOtp(@Valid @RequestBody SendOtpRequest otpRequest) {
+        Map<String, Object> response = authService.sendPhoneOtp(otpRequest);
+        return ResponseEntity.ok(ApiResponse.success("OTP sent successfully", response));
+    }
+
+    @PostMapping("/otp/verify")
+    @Operation(summary = "Verify OTP code and authenticate or register user")
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> verifyPhoneOtp(@Valid @RequestBody VerifyOtpRequest verifyRequest) {
+        JwtAuthResponse response = authService.verifyPhoneOtp(verifyRequest);
+        return ResponseEntity.ok(ApiResponse.success("Phone OTP verification successful", response));
+    }
+
+    @PostMapping("/forgot-password/request")
+    @Operation(summary = "Request password reset code for email")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        Map<String, Object> response = authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Password reset request processed", response));
+    }
+
+    @PostMapping("/forgot-password/reset")
+    @Operation(summary = "Reset user password with verification token")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        Map<String, Object> response = authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Password reset successful", response));
+    }
+
+    @PostMapping("/link-account")
+    @Operation(summary = "Link additional authentication method (Google, Phone, Email) to logged in account")
+    public ResponseEntity<ApiResponse<UserResponse>> linkAccount(@Valid @RequestBody LinkAccountRequest request) {
+        UserResponse response = authService.linkAccount(request);
+        return ResponseEntity.ok(ApiResponse.success("Account linked successfully", response));
     }
 
     @PostMapping("/refresh-token")

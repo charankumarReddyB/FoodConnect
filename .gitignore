@@ -31,3 +31,4 @@ Thumbs.db
 .antigravity/
 .system_generated/
 *.log
+logs/

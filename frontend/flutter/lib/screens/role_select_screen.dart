@@ -90,7 +90,12 @@ class RoleSelectScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => LoginScreen(role: r['id'] as String),
+                            builder: (_) => LoginScreen(
+                              initialRole: r['id'] as String,
+                              onSuccess: () {
+                                Navigator.popUntil(context, (route) => route.isFirst);
+                              },
+                            ),
                           ),
                         );
                       },

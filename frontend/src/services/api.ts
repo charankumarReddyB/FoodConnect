@@ -101,6 +101,35 @@ function getAuthHeaders(): Record<string, string> {
   return headers
 }
 
+async function safeJsonResponse<T>(response: Response, defaultErrorMsg: string): Promise<T> {
+  const text = await response.text()
+  let json: ApiResponse<T> | null = null
+
+  if (text && text.trim().length > 0) {
+    try {
+      json = JSON.parse(text)
+    } catch (_) {
+      // Non-JSON response (HTML, 502/504 gateway timeout or proxy error)
+    }
+  }
+
+  if (!response.ok) {
+    const errorMsg = json?.message || (text && !text.includes('<!DOCTYPE') && !text.includes('<html') ? text : null)
+    if (errorMsg) throw new Error(errorMsg)
+
+    if (response.status === 502 || response.status === 504 || response.status === 404 || !text) {
+      throw new Error(`Unable to connect to FoodConnect backend server (HTTP ${response.status}). Please ensure the Java Spring Boot backend is running.`)
+    }
+    throw new Error(`${defaultErrorMsg} (Status ${response.status})`)
+  }
+
+  if (!json || json.success === false) {
+    throw new Error(json?.message || defaultErrorMsg)
+  }
+
+  return json.data as T
+}
+
 // Authentication API
 export const authApi = {
   async register(data: any): Promise<UserProfile> {
@@ -109,9 +138,7 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     })
-    const json: ApiResponse<UserProfile> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Registration failed')
-    return json.data!
+    return safeJsonResponse<UserProfile>(response, 'Registration failed')
   },
 
   async login(credentials: { email: string; password: string }): Promise<JwtAuthResponse> {
@@ -120,13 +147,76 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
     })
-    const json: ApiResponse<JwtAuthResponse> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Login failed')
-    if (json.data?.accessToken) {
-      localStorage.setItem('foodconnect_token', json.data.accessToken)
-      localStorage.setItem('foodconnect_refresh_token', json.data.refreshToken)
+    const data = await safeJsonResponse<JwtAuthResponse>(response, 'Login failed')
+    if (data?.accessToken) {
+      localStorage.setItem('foodconnect_token', data.accessToken)
+      localStorage.setItem('foodconnect_refresh_token', data.refreshToken)
     }
-    return json.data!
+    return data
+  },
+
+  async googleAuth(data: { googleId: string; email: string; fullName: string; profileImageUrl?: string; role?: string }): Promise<JwtAuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/google`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    const result = await safeJsonResponse<JwtAuthResponse>(response, 'Google authentication failed')
+    if (result?.accessToken) {
+      localStorage.setItem('foodconnect_token', result.accessToken)
+      localStorage.setItem('foodconnect_refresh_token', result.refreshToken)
+    }
+    return result
+  },
+
+  async sendPhoneOtp(phone: string): Promise<{ success: boolean; message: string; devOtpCode?: string }> {
+    const response = await fetch(`${API_BASE_URL}/auth/otp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    })
+    return safeJsonResponse<{ success: boolean; message: string; devOtpCode?: string }>(response, 'Failed to send OTP')
+  },
+
+  async verifyPhoneOtp(data: { phone: string; otpCode: string; fullName?: string; email?: string; role?: string }): Promise<JwtAuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    const result = await safeJsonResponse<JwtAuthResponse>(response, 'OTP verification failed')
+    if (result?.accessToken) {
+      localStorage.setItem('foodconnect_token', result.accessToken)
+      localStorage.setItem('foodconnect_refresh_token', result.refreshToken)
+    }
+    return result
+  },
+
+  async forgotPassword(email: string): Promise<{ success: boolean; message: string; devResetToken?: string }> {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password/request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    })
+    return safeJsonResponse<{ success: boolean; message: string; devResetToken?: string }>(response, 'Failed to process forgot password request')
+  },
+
+  async resetPassword(resetToken: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/auth/forgot-password/reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ resetToken, newPassword }),
+    })
+    return safeJsonResponse<{ success: boolean; message: string }>(response, 'Failed to reset password')
+  },
+
+  async linkAccount(data: { provider: string; googleId?: string; phone?: string; email?: string; password?: string }): Promise<UserProfile> {
+    const response = await fetch(`${API_BASE_URL}/auth/link-account`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    })
+    return safeJsonResponse<UserProfile>(response, 'Failed to link account')
   },
 
   async getCurrentUser(): Promise<UserProfile> {
@@ -134,9 +224,7 @@ export const authApi = {
       method: 'GET',
       headers: getAuthHeaders(),
     })
-    const json: ApiResponse<UserProfile> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Failed to fetch user profile')
-    return json.data!
+    return safeJsonResponse<UserProfile>(response, 'Failed to fetch user profile')
   },
 
   logout() {
@@ -153,9 +241,7 @@ export const donationsApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data),
     })
-    const json: ApiResponse<DonationItem> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Failed to post donation')
-    return json.data!
+    return safeJsonResponse<DonationItem>(response, 'Failed to post donation')
   },
 
   async getNearbyDonations(lat: number, lon: number, radiusKm: number = 10): Promise<DonationItem[]> {
@@ -163,9 +249,7 @@ export const donationsApi = {
       method: 'GET',
       headers: getAuthHeaders(),
     })
-    const json: ApiResponse<DonationItem[]> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Failed to fetch nearby donations')
-    return json.data || []
+    return safeJsonResponse<DonationItem[]>(response, 'Failed to fetch nearby donations')
   },
 }
 
@@ -177,13 +261,7 @@ export const checkInApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data || {}),
     })
-    const json: ApiResponse<CheckInResponse> = await response.json()
-    if (!response.ok) {
-      const err: any = new Error(json.message || 'Check-in failed')
-      err.status = response.status
-      throw err
-    }
-    return json.data!
+    return safeJsonResponse<CheckInResponse>(response, 'Check-in failed')
   },
 
   async getStatus(): Promise<CheckInStatusResponse> {
@@ -191,9 +269,7 @@ export const checkInApi = {
       method: 'GET',
       headers: getAuthHeaders(),
     })
-    const json: ApiResponse<CheckInStatusResponse> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Failed to retrieve status')
-    return json.data!
+    return safeJsonResponse<CheckInStatusResponse>(response, 'Failed to retrieve status')
   },
 
   async getAdminCheckIns(params?: { search?: string; status?: string; page?: number; size?: number }): Promise<PagedResponse<CheckInResponse>> {
@@ -207,9 +283,7 @@ export const checkInApi = {
       method: 'GET',
       headers: getAuthHeaders(),
     })
-    const json: ApiResponse<PagedResponse<CheckInResponse>> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Failed to fetch admin check-ins')
-    return json.data!
+    return safeJsonResponse<PagedResponse<CheckInResponse>>(response, 'Failed to fetch admin check-ins')
   },
 
   async adminCheckInUser(userId: string, data?: CheckInRequest): Promise<CheckInResponse> {
@@ -218,9 +292,7 @@ export const checkInApi = {
       headers: getAuthHeaders(),
       body: JSON.stringify(data || {}),
     })
-    const json: ApiResponse<CheckInResponse> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Admin check-in failed')
-    return json.data!
+    return safeJsonResponse<CheckInResponse>(response, 'Admin check-in failed')
   },
 
   async adminUndoCheckIn(checkInId: string): Promise<CheckInResponse> {
@@ -228,8 +300,6 @@ export const checkInApi = {
       method: 'DELETE',
       headers: getAuthHeaders(),
     })
-    const json: ApiResponse<CheckInResponse> = await response.json()
-    if (!response.ok) throw new Error(json.message || 'Failed to undo check-in')
-    return json.data!
+    return safeJsonResponse<CheckInResponse>(response, 'Failed to undo check-in')
   },
 }

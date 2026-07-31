@@ -47,7 +47,7 @@ public class Volunteer {
     private Double currentLongitude;
 
     @Builder.Default
-    @Column(precision = 3, scale = 2)
+    @Column(name = "rating")
     private Double rating = 5.00;
 
     @Builder.Default
