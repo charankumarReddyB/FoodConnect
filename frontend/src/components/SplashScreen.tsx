@@ -40,7 +40,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
         <Logo size="xl" variant="full" className="mb-6" />
         
         <p className="text-slate-300 text-sm max-w-xs font-medium mt-2 leading-relaxed tracking-wide">
-          Connecting Surplus Food with Communities Across India 🇮🇳
+          Connecting Surplus Food with Communities Across India
         </p>
 
         {/* Loading Progress Bar */}

@@ -193,10 +193,23 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
+    private String normalizePhone(String rawPhone) {
+        if (rawPhone == null) return "";
+        String cleaned = rawPhone.trim().replaceAll("[^+\\d]", "");
+        if (!cleaned.startsWith("+")) {
+            if (cleaned.length() == 10) {
+                cleaned = "+91" + cleaned;
+            } else {
+                cleaned = "+" + cleaned;
+            }
+        }
+        return cleaned;
+    }
+
     @Override
     @Transactional
     public Map<String, Object> sendPhoneOtp(SendOtpRequest request) {
-        String phone = request.getPhone().trim();
+        String phone = normalizePhone(request.getPhone());
         log.info("Requesting OTP for phone number: {}", phone);
 
         Optional<PhoneOtpToken> existingTokenOpt = phoneOtpTokenRepository.findTopByPhoneOrderByCreatedAtDesc(phone);
@@ -253,7 +266,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public JwtAuthResponse verifyPhoneOtp(VerifyOtpRequest request) {
-        String phone = request.getPhone().trim();
+        String phone = normalizePhone(request.getPhone());
         String otpCode = request.getOtpCode().trim();
         log.info("Verifying OTP for phone: {}", phone);
 

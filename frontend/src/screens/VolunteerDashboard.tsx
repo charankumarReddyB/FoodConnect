@@ -57,7 +57,7 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
         <div className="flex items-center justify-between mb-1">
           <div>
             <p className="text-white/70 text-xs">Welcome back,</p>
-            <h1 className="text-lg font-bold text-white font-poppins">Priya Nair 🚴</h1>
+            <h1 className="text-lg font-bold text-white font-poppins">Priya Nair</h1>
           </div>
           <div className="flex gap-2">
             <button onClick={() => onNavigate('notifications')} className="relative w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">

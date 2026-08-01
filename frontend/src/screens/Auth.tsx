@@ -19,11 +19,11 @@ const roleConfig: Record<Role, { label: string; backendRole: string; color: stri
 }
 
 const COUNTRY_CODES = [
-  { code: '+91', flag: '🇮🇳', label: 'India (+91)' },
-  { code: '+1', flag: '🇺🇸', label: 'USA (+1)' },
-  { code: '+44', flag: '🇬🇧', label: 'UK (+44)' },
-  { code: '+61', flag: '🇦🇺', label: 'Australia (+61)' },
-  { code: '+971', flag: '🇦🇪', label: 'UAE (+971)' },
+  { code: '+91', flag: 'IN', label: 'India (+91)' },
+  { code: '+1', flag: 'US', label: 'USA (+1)' },
+  { code: '+44', flag: 'UK', label: 'UK (+44)' },
+  { code: '+61', flag: 'AU', label: 'Australia (+61)' },
+  { code: '+971', flag: 'AE', label: 'UAE (+971)' },
 ]
 
 export default function Auth({ role, onSuccess, onBack }: AuthProps) {
@@ -66,14 +66,55 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
   const fullPhoneNumber = `${countryCode}${phoneNum.trim()}`
 
   const handleOtpChange = (i: number, val: string) => {
-    if (val.length > 1) return
+    const digits = val.replace(/\D/g, '')
+    if (!digits) {
+      const next = [...otp]
+      next[i] = ''
+      setOtp(next)
+      return
+    }
+
+    if (digits.length > 1) {
+      const pasted = digits.slice(0, 6).split('')
+      const next = [...otp]
+      for (let idx = 0; idx < 6; idx++) {
+        if (pasted[idx]) next[idx] = pasted[idx]
+      }
+      setOtp(next)
+      const focusIndex = Math.min(pasted.length, 5)
+      const el = document.getElementById(`otp-${focusIndex}`)
+      el?.focus()
+      return
+    }
+
     const next = [...otp]
-    next[i] = val
+    next[i] = digits[0]
     setOtp(next)
-    if (val && i < 5) {
+    if (i < 5) {
       const el = document.getElementById(`otp-${i + 1}`)
       el?.focus()
     }
+  }
+
+  const handleOtpKeyDown = (i: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) {
+      const el = document.getElementById(`otp-${i - 1}`)
+      el?.focus()
+    }
+  }
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (!pastedData) return
+    const next = [...otp]
+    for (let idx = 0; idx < 6; idx++) {
+      if (pastedData[idx]) next[idx] = pastedData[idx]
+    }
+    setOtp(next)
+    const focusIndex = Math.min(pastedData.length, 5)
+    const el = document.getElementById(`otp-${focusIndex}`)
+    el?.focus()
   }
 
   const handleGoogleAuth = async () => {
@@ -287,17 +328,19 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                 We sent a 6-digit verification code to <span className="font-semibold text-text-primary">{fullPhoneNumber}</span>
               </p>
 
-              <div className="flex gap-2 mb-8">
+              <div className="flex justify-center gap-2 sm:gap-3 mb-8">
                 {otp.map((v, i) => (
                   <input
                     key={i}
                     id={`otp-${i}`}
                     type="text"
                     inputMode="numeric"
-                    maxLength={1}
+                    maxLength={6}
                     value={v}
                     onChange={(e) => handleOtpChange(i, e.target.value)}
-                    className="flex-1 h-13 text-center text-xl font-bold text-text-primary bg-bg rounded-xl border-2 border-border focus:border-primary focus:outline-none"
+                    onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                    onPaste={handleOtpPaste}
+                    className="w-11 h-13 sm:w-12 sm:h-14 text-center text-xl font-bold text-text-primary bg-bg rounded-xl border-2 border-border focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all shadow-sm"
                   />
                 ))}
               </div>

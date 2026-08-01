@@ -38,24 +38,38 @@ public class SmsServiceImpl implements SmsService {
 
     @Override
     public boolean sendSms(String toPhone, String message) {
-        log.info("Initiating SMS dispatch via provider: {} to phone: {}", smsProvider, toPhone);
+        String formattedPhone = normalizePhone(toPhone);
+        log.info("Initiating SMS dispatch via provider: {} to phone: {}", smsProvider, formattedPhone);
 
         if (!smsEnabled) {
-            log.info("[SMS DISABLED] Message for {}: {}", toPhone, message);
+            log.info("[SMS DISABLED] Message for {}: {}", formattedPhone, message);
             return true;
         }
 
         try {
             if ("TWILIO".equalsIgnoreCase(smsProvider)) {
-                return sendTwilioSms(toPhone, message);
+                return sendTwilioSms(formattedPhone, message);
             } else {
-                log.info("[SMS GATEWAY LOG] Sent message to {}: {}", toPhone, message);
+                log.info("[SMS GATEWAY LOG] Sent message to {}: {}", formattedPhone, message);
                 return true;
             }
         } catch (Exception e) {
-            log.error("Failed to send SMS to {}: {}", toPhone, e.getMessage(), e);
+            log.error("Failed to send SMS to {}: {}", formattedPhone, e.getMessage(), e);
             return false;
         }
+    }
+
+    private String normalizePhone(String rawPhone) {
+        if (rawPhone == null) return "";
+        String cleaned = rawPhone.trim().replaceAll("[^+\\d]", "");
+        if (!cleaned.startsWith("+")) {
+            if (cleaned.length() == 10) {
+                cleaned = "+91" + cleaned;
+            } else {
+                cleaned = "+" + cleaned;
+            }
+        }
+        return cleaned;
     }
 
     private boolean sendTwilioSms(String toPhone, String message) {
@@ -76,8 +90,8 @@ public class SmsServiceImpl implements SmsService {
 
             HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(map, headers);
 
-            if (accountSid.startsWith("AC_MOCK")) {
-                log.info("[SMS PROVIDER SUCCESS - MOCK MODE] Twilio SMS dispatched to {}: {}", toPhone, message);
+            if (accountSid == null || accountSid.startsWith("AC_MOCK") || authToken.contains("MOCK")) {
+                log.info("[SMS MOCK MODE] Dev OTP mode active for {}. Code message: {}", toPhone, message);
                 return true;
             }
 
@@ -91,7 +105,6 @@ public class SmsServiceImpl implements SmsService {
             }
         } catch (Exception e) {
             log.error("Error executing Twilio SMS API call to {}: {}", toPhone, e.getMessage());
-            // Graceful fallback logging
             log.info("[SMS FALLBACK LOG] Message intended for {}: {}", toPhone, message);
             return false;
         }

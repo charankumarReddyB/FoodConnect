@@ -1,4 +1,4 @@
-# 🍲 FoodConnect - Location-Based Surplus Food Redistribution Platform
+# FoodConnect - Location-Based Surplus Food Redistribution Platform
 
 ![Java 21/25](https://img.shields.io/badge/Java-21%2F25-orange.svg)
 ![Spring Boot 3](https://img.shields.io/badge/Spring%20Boot-3.3.2-brightgreen.svg)
@@ -12,7 +12,7 @@
 
 ---
 
-## 🏗️ Architecture & Tech Stack
+## Architecture & Tech Stack
 
 ```
  ┌─────────────────────────────────────────────────────────────────────────┐
@@ -40,50 +40,55 @@
 
 ---
 
-## 🔐 Advanced Authentication & Security System
+## Advanced Authentication & Security System
 
 FoodConnect features a multi-method authentication system:
 
-1. **📱 Phone Number Login with OTP Verification**:
+1. **Phone Number Login with OTP Verification**:
    - E.164 phone number format validation (`+919876543210`).
    - Secure 6-digit random OTP generation with BCrypt hashing (`phone_otp_tokens`). Plain-text OTPs are **never** stored.
    - **OTP Replay Protection**: Enforces single-use status (`isVerified = true`). OTP codes cannot be reused.
    - **Rate Limiting & Anti-Spam**: 60-second resend cooldown and 5 requests per 10-minute rate limit.
    - **Brute-Force Protection**: 5 max failed verification attempts before OTP lockout.
-2. **🌐 Google Sign-In**:
+2. **Google Sign-In**:
    - Official Google Sign-In integration for Flutter Mobile, Flutter Web, and React Web.
    - Automatic user account creation and account linking when emails match.
-3. **🔑 Email & Password Login**:
+3. **Email & Password Login**:
    - BCrypt password hashing via Spring Security.
    - Password reset via single-use 15-minute expiration tokens.
-4. **🔗 Multi-Provider Account Linking**:
+4. **Multi-Provider Account Linking**:
    - Link Phone OTP, Google OAuth, and Email/Password to a unified user profile.
 
 ---
 
-## 🛠️ Getting Started Guide
+## Getting Started Guide
 
 ### Prerequisites
 - **Java Development Kit**: JDK 21 or JDK 25 installed.
-- **Node.js & npm**: Node.js 18+ for React frontend development.
-- **Maven**: Maven 3.8+.
+- **Node.js & npm**: Node.js 18+ for React web development.
+- **Flutter SDK**: Flutter 3.0+ for cross-platform mobile development.
 
 ---
 
 ### 1. Running the Backend Server (Spring Boot)
 
-```bash
+```powershell
+# Navigate to backend directory
 cd backend
-mvn spring-boot:run
+
+# Run with local Maven Wrapper (Windows PowerShell / CMD)
+.\mvnw.cmd spring-boot:run
+
+# Or run with local Maven Wrapper (Linux / macOS / Bash)
+./mvnw spring-boot:run
 ```
 
-- The backend automatically initializes with embedded H2 database (`jdbc:h2:mem:foodconnect`) when PostgreSQL is not configured, enabling zero-dependency local startup.
-- **Tomcat Web Server**: Starts on `http://localhost:8080`.
-- **OpenAPI / Swagger UI**: Available at `http://localhost:8080/swagger-ui.html`.
-- **H2 Console**: Available at `http://localhost:8080/h2-console`.
+- **Zero-Dependency Startup**: The backend automatically initializes an in-memory H2 database (`jdbc:h2:mem:foodconnect`) when PostgreSQL is not configured.
+- **Tomcat REST Server**: `http://localhost:8080`
+- **Swagger / OpenAPI Interactive API Docs**: `http://localhost:8080/swagger-ui.html`
+- **H2 Database Web Console**: `http://localhost:8080/h2-console`
 
 #### Production PostgreSQL Configuration (`backend/src/main/resources/application.yml`)
-Set environment variables:
 ```bash
 export SPRING_PROFILES_ACTIVE=prod
 export SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/foodconnect
@@ -95,34 +100,41 @@ export SPRING_DATASOURCE_PASSWORD=yourpassword
 
 ### 2. Running the React Web Application (`frontend`)
 
-```bash
+```powershell
+# Navigate to frontend directory
 cd frontend
+
+# Install dependencies and start Vite dev server
 npm install
 npm run dev
 ```
 
-- The React Vite dev server starts on `http://localhost:8443` (or configured port).
-- Automatically proxies `/api/v1` API calls to `http://localhost:8080`.
+- **React Vite Web Server**: Starts on `http://localhost:8443` (automatically handles port fallback if 8443 is in use).
+- **API Gateway Proxy**: Automatically forwards `/api/v1` requests to `http://localhost:8080`.
 
 ---
 
-### 3. Running the Flutter App (`frontend/flutter`)
+### 3. Running the Flutter Mobile App (`frontend/flutter`)
 
-```bash
+```powershell
+# Navigate to Flutter app directory
 cd frontend/flutter
+
+# Fetch dependencies and launch app
 flutter pub get
 flutter run
 ```
 
 ---
 
-## 🧪 Automated Testing & Verification
+## Automated Testing & Verification
 
 Run the full backend automated test suite:
 
-```bash
+```powershell
 cd backend
-mvn test
+.\mvnw.cmd test               # On Windows
+# or ./mvnw test              # On Linux / macOS
 ```
 
 ### Test Suite Execution Summary

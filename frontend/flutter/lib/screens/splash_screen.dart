@@ -93,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Nourishing Communities Across India 🇮🇳',
+                  'Nourishing Communities Across India',
                   style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
                 ),
                 const SizedBox(height: 48),

@@ -159,7 +159,9 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
       <div className="bg-surface border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div>
           <p className="text-xs text-text-secondary">Admin Console</p>
-          <h1 className="text-lg font-bold text-text-primary font-poppins">FoodConnect Admin 🛡️</h1>
+          <h1 className="text-lg font-bold text-text-primary font-poppins flex items-center gap-1.5">
+            FoodConnect Admin <ShieldCheck className="w-5 h-5 text-rose-600 inline" />
+          </h1>
         </div>
         <div className="flex items-center gap-3">
           {/* Navigation Tab Switcher */}

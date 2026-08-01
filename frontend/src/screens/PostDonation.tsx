@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowLeft, Camera, MapPin, Clock, Users, Leaf, Package, ChevronDown, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Camera, MapPin, Clock, Users, Leaf, Package, ChevronDown, CheckCircle, Truck, Building } from 'lucide-react'
 
 interface PostDonationProps {
   onBack: () => void
@@ -249,8 +249,8 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
           <h2 className="text-sm font-bold text-text-primary font-poppins mb-3">Delivery Preference</h2>
           <div className="grid grid-cols-2 gap-3">
             {[
-              { key: 'volunteer' as const, label: 'Volunteer Delivery', desc: 'A nearby volunteer picks up and delivers', icon: '🚴' },
-              { key: 'pickup' as const, label: 'Recipient Pickup', desc: 'The recipient collects food directly', icon: '🏢' },
+              { key: 'volunteer' as const, label: 'Volunteer Delivery', desc: 'A nearby volunteer picks up and delivers', icon: Truck },
+              { key: 'pickup' as const, label: 'Recipient Pickup', desc: 'The recipient collects food directly', icon: Building },
             ].map((opt) => (
               <button
                 key={opt.key}
@@ -261,7 +261,7 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
                     : 'border-border hover:border-primary-100'
                 }`}
               >
-                <span className="text-2xl mb-2 block">{opt.icon}</span>
+                <opt.icon className={`w-6 h-6 mb-2 ${delivery === opt.key ? 'text-primary' : 'text-text-secondary'}`} />
                 <p className={`text-xs font-bold mb-1 ${delivery === opt.key ? 'text-primary' : 'text-text-primary'}`}>{opt.label}</p>
                 <p className="text-[11px] text-text-secondary leading-tight">{opt.desc}</p>
               </button>

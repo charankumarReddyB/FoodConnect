@@ -111,7 +111,7 @@ export default function Settings({ onBack }: SettingsProps) {
 
         <div className="text-center py-4">
           <p className="text-xs text-slate-400">FoodConnect v2.4.1</p>
-          <p className="text-xs text-slate-400 mt-0.5">© 2026 FoodConnect. Made with ❤️ in India</p>
+          <p className="text-xs text-slate-400 mt-0.5">© 2026 FoodConnect. Built for India</p>
         </div>
       </div>
 

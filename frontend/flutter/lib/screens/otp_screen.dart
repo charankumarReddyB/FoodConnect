@@ -7,12 +7,14 @@ class OtpScreen extends StatefulWidget {
   final String phone;
   final String role;
   final VoidCallback onSuccess;
+  final String? initialDevOtpCode;
 
   const OtpScreen({
     super.key,
     required this.phone,
     this.role = 'DONOR',
     required this.onSuccess,
+    this.initialDevOtpCode,
   });
 
   @override
@@ -37,6 +39,7 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   void initState() {
     super.initState();
+    _devOtpHint = widget.initialDevOtpCode;
     _startTimers();
   }
 

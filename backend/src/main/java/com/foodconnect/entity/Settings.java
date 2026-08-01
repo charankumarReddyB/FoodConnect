@@ -19,7 +19,7 @@ public class Settings {
     @Column(name = "key_name", nullable = false, unique = true, length = 100)
     private String keyName;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "`value`", nullable = false, columnDefinition = "TEXT")
     private String value;
 
     @Column(length = 255)

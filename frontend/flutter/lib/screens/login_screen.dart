@@ -37,11 +37,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   String? _successMessage;
 
   final List<Map<String, String>> _countryCodes = [
-    {'code': '+91', 'flag': '🇮🇳', 'name': 'India'},
-    {'code': '+1', 'flag': '🇺🇸', 'name': 'United States'},
-    {'code': '+44', 'flag': '🇬🇧', 'name': 'United Kingdom'},
-    {'code': '+61', 'flag': '🇦🇺', 'name': 'Australia'},
-    {'code': '+971', 'flag': '🇦🇪', 'name': 'UAE'},
+    {'code': '+91', 'flag': 'IN', 'name': 'India'},
+    {'code': '+1', 'flag': 'US', 'name': 'United States'},
+    {'code': '+44', 'flag': 'UK', 'name': 'United Kingdom'},
+    {'code': '+61', 'flag': 'AU', 'name': 'Australia'},
+    {'code': '+971', 'flag': 'AE', 'name': 'UAE'},
   ];
 
   @override
@@ -125,6 +125,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             phone: fullPhone,
             role: widget.initialRole,
             onSuccess: widget.onSuccess,
+            initialDevOtpCode: res['devOtpCode']?.toString(),
           ),
         ),
       );
@@ -180,6 +181,41 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       setState(() {
         _isLoading = false;
         _successMessage = _isRegisterMode ? 'Registration successful!' : 'Login successful!';
+      });
+
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) widget.onSuccess();
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      });
+    }
+  }
+
+  Future<void> _handleGoogleAuth() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+
+    try {
+      final timeStr = DateTime.now().millisecondsSinceEpoch.toString();
+      final mockGoogleId = 'google_id_$timeStr';
+      final mockEmail = 'user_${timeStr.substring(timeStr.length - 4)}@gmail.com';
+
+      await ApiService.loginWithGoogle(
+        googleId: mockGoogleId,
+        email: mockEmail,
+        fullName: _fullNameController.text.trim().isNotEmpty ? _fullNameController.text.trim() : 'Google User',
+        role: widget.initialRole,
+      );
+
+      setState(() {
+        _isLoading = false;
+        _successMessage = 'Signed in with Google successfully!';
       });
 
       Future.delayed(const Duration(milliseconds: 400), () {
@@ -568,6 +604,42 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'OR',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.grey[500] : Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _handleGoogleAuth,
+                      icon: const Icon(Icons.g_mobiledata_rounded, size: 28, color: Color(0xFF4285F4)),
+                      label: Text(
+                        'Continue with Google',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: isDark ? Colors.grey[800]! : Colors.grey[300]!),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
                   ],

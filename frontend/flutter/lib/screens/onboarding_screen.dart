@@ -12,21 +12,21 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<Map<String, String>> _pages = [
+  final List<Map<String, dynamic>> _pages = [
     {
       'title': 'Post Surplus Food',
       'desc': 'Share extra food from events, restaurants, or home with local communities.',
-      'icon': '🍲',
+      'icon': Icons.restaurant_rounded,
     },
     {
       'title': 'Real-Time Map Match',
       'desc': 'GPS precision connects nearby NGOs, shelters, and orphanages in minutes.',
-      'icon': '📍',
+      'icon': Icons.location_on_rounded,
     },
     {
       'title': 'Verified Delivery',
       'desc': 'Trained volunteers pick up and deliver food with OTP code verification.',
-      'icon': '🚴‍♂️',
+      'icon': Icons.delivery_dining_rounded,
     },
   ];
 
@@ -63,16 +63,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(item['icon']!, style: const TextStyle(fontSize: 80)),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            item['icon'] as IconData,
+                            size: 64,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
                         const SizedBox(height: 32),
                         Text(
-                          item['title']!,
+                          item['title'] as String,
                           textAlign: TextAlign.center,
                           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.extrabold),
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          item['desc']!,
+                          item['desc'] as String,
                           textAlign: TextAlign.center,
                           style: const TextStyle(color: Color(0xFF64748B), fontSize: 15, height: 1.4),
                         ),

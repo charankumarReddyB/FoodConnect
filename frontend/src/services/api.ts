@@ -151,6 +151,9 @@ export const authApi = {
     if (data?.accessToken) {
       localStorage.setItem('foodconnect_token', data.accessToken)
       localStorage.setItem('foodconnect_refresh_token', data.refreshToken)
+      if (data.user) {
+        localStorage.setItem('foodconnect_user', JSON.stringify(data.user))
+      }
     }
     return data
   },
@@ -165,6 +168,9 @@ export const authApi = {
     if (result?.accessToken) {
       localStorage.setItem('foodconnect_token', result.accessToken)
       localStorage.setItem('foodconnect_refresh_token', result.refreshToken)
+      if (result.user) {
+        localStorage.setItem('foodconnect_user', JSON.stringify(result.user))
+      }
     }
     return result
   },
@@ -188,6 +194,9 @@ export const authApi = {
     if (result?.accessToken) {
       localStorage.setItem('foodconnect_token', result.accessToken)
       localStorage.setItem('foodconnect_refresh_token', result.refreshToken)
+      if (result.user) {
+        localStorage.setItem('foodconnect_user', JSON.stringify(result.user))
+      }
     }
     return result
   },
@@ -224,12 +233,30 @@ export const authApi = {
       method: 'GET',
       headers: getAuthHeaders(),
     })
-    return safeJsonResponse<UserProfile>(response, 'Failed to fetch user profile')
+    const user = await safeJsonResponse<UserProfile>(response, 'Failed to fetch user profile')
+    if (user) {
+      localStorage.setItem('foodconnect_user', JSON.stringify(user))
+    }
+    return user
+  },
+
+  async updateProfile(data: { fullName?: string; phone?: string; address?: string; profileImageUrl?: string }): Promise<UserProfile> {
+    const response = await fetch(`${API_BASE_URL}/users/profile`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    })
+    const updated = await safeJsonResponse<UserProfile>(response, 'Failed to update profile')
+    if (updated) {
+      localStorage.setItem('foodconnect_user', JSON.stringify(updated))
+    }
+    return updated
   },
 
   logout() {
     localStorage.removeItem('foodconnect_token')
     localStorage.removeItem('foodconnect_refresh_token')
+    localStorage.removeItem('foodconnect_user')
   },
 }
 
