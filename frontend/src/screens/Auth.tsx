@@ -188,19 +188,24 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
     try {
       const digits = phoneNum.trim().replace(/\D/g, '')
       const fullPhone = `${countryCode}${digits}`
-      try {
-        const recaptcha = setupRecaptcha('recaptcha-container')
-        const confirmation = await signInWithPhoneNumber(firebaseAuth, fullPhone, recaptcha)
-        setConfirmationResult(confirmation)
-        setSuccessMsg(`Firebase OTP sent via SMS to ${fullPhone}`)
-      } catch (fbErr: any) {
-        console.warn('Firebase Phone Auth warning on localhost:', fbErr.message)
-        setSuccessMsg(`OTP verification active for ${fullPhone}. Enter your OTP or test code (123456).`)
-      }
+      const recaptcha = setupRecaptcha('recaptcha-container')
+      const confirmation = await signInWithPhoneNumber(firebaseAuth, fullPhone, recaptcha)
+      setConfirmationResult(confirmation)
       setMode('otp')
       setCooldown(60)
+      setSuccessMsg(`Firebase OTP sent via SMS to ${fullPhone}`)
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to process phone verification')
+      console.error('Firebase Phone Auth error:', err)
+      const msg = err?.message || err?.code || 'Failed to send SMS'
+      if (msg.includes('auth/unauthorized-domain')) {
+        setErrorMsg('Domain not authorized in Firebase Console. Please add your Vercel URL to Authorized Domains in Firebase.')
+      } else if (msg.includes('auth/quota-exceeded')) {
+        setErrorMsg('Firebase daily SMS quota exceeded. Use a test phone number (e.g. +919652233592 with code 123456) in Firebase Console.')
+      } else if (msg.includes('auth/invalid-phone-number')) {
+        setErrorMsg('Invalid mobile phone number format.')
+      } else {
+        setErrorMsg(`Firebase SMS error: ${msg}`)
+      }
     } finally {
       setLoading(false)
     }
