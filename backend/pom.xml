@@ -72,6 +72,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Firebase Admin SDK -->
+        <dependency>
+            <groupId>com.google.firebase</groupId>
+            <artifactId>firebase-admin</artifactId>
+            <version>9.3.0</version>
+        </dependency>
+
         <!-- OpenAPI / Swagger Documentation -->
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -122,13 +129,7 @@
                 <version>3.13.0</version>
                 <configuration>
                     <release>21</release>
-                    <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
-                        </path>
-                    </annotationProcessorPaths>
+                    <fork>true</fork>
                 </configuration>
             </plugin>
             <plugin>

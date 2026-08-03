@@ -46,6 +46,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Google authentication successful", response));
     }
 
+    @PostMapping("/firebase")
+    @Operation(summary = "Verify Firebase ID Token and authenticate or register user (Phone / Google / Email)")
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> authenticateWithFirebase(@Valid @RequestBody FirebaseTokenRequest request) {
+        JwtAuthResponse response = authService.authenticateWithFirebase(request);
+        return ResponseEntity.ok(ApiResponse.success("Firebase authentication successful", response));
+    }
+
     @PostMapping("/otp/send")
     @Operation(summary = "Send OTP to mobile number with rate limiting and cooldown enforcement")
     public ResponseEntity<ApiResponse<Map<String, Object>>> sendPhoneOtp(@Valid @RequestBody SendOtpRequest otpRequest) {

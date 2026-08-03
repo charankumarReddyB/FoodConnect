@@ -175,6 +175,23 @@ export const authApi = {
     return result
   },
 
+  async firebaseAuth(data: { idToken: string; role?: string; fullName?: string; phone?: string; email?: string; provider?: string }): Promise<JwtAuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/firebase`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    const result = await safeJsonResponse<JwtAuthResponse>(response, 'Firebase authentication failed')
+    if (result?.accessToken) {
+      localStorage.setItem('foodconnect_token', result.accessToken)
+      localStorage.setItem('foodconnect_refresh_token', result.refreshToken)
+      if (result.user) {
+        localStorage.setItem('foodconnect_user', JSON.stringify(result.user))
+      }
+    }
+    return result
+  },
+
   async sendPhoneOtp(phone: string): Promise<{ success: boolean; message: string; devOtpCode?: string }> {
     const response = await fetch(`${API_BASE_URL}/auth/otp/send`, {
       method: 'POST',

@@ -49,6 +49,9 @@ class AuthSecurityTest {
     @Mock
     private SmsService smsService;
 
+    @Mock
+    private com.foodconnect.mapper.UserMapper userMapper;
+
     @InjectMocks
     private AuthServiceImpl authService;
 
@@ -92,12 +95,27 @@ class AuthSecurityTest {
                 .thenReturn(Optional.empty());
         when(passwordEncoder.encode(any())).thenReturn("hashed_otp_code");
         when(phoneOtpTokenRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+        when(smsService.sendSms(anyString(), anyString())).thenReturn(true);
 
         Map<String, Object> result = authService.sendPhoneOtp(request);
 
         assertNotNull(result);
         assertTrue((Boolean) result.get("success"));
         verify(smsService, times(1)).sendSms(eq("+919876543210"), anyString());
+    }
+
+    @Test
+    @DisplayName("SMS FAILURE TEST: Reject OTP request if SMS provider fails or returns false")
+    void testSendPhoneOtp_SmsFailure_ThrowsException() {
+        SendOtpRequest request = new SendOtpRequest("+919876543210");
+        when(phoneOtpTokenRepository.findTopByPhoneOrderByCreatedAtDesc("+919876543210"))
+                .thenReturn(Optional.empty());
+        when(passwordEncoder.encode(any())).thenReturn("hashed_otp_code");
+        when(phoneOtpTokenRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+        when(smsService.sendSms(anyString(), anyString())).thenReturn(false);
+
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> authService.sendPhoneOtp(request));
+        assertTrue(exception.getMessage().contains("SMS delivery failed"));
     }
 
     @Test
@@ -119,12 +137,46 @@ class AuthSecurityTest {
         when(phoneOtpTokenRepository.findTopByPhoneOrderByCreatedAtDesc("+919876543210"))
                 .thenReturn(Optional.of(sampleToken));
 
-        VerifyOtpRequest request = VerifyOtpRequest.builder()
+        VerifyOtpRequest verifyReq = VerifyOtpRequest.builder()
                 .phone("+919876543210")
                 .otpCode("999999")
                 .build();
 
-        BadRequestException exception = assertThrows(BadRequestException.class, () -> authService.verifyPhoneOtp(request));
+        BadRequestException exception = assertThrows(BadRequestException.class, () -> authService.verifyPhoneOtp(verifyReq));
         assertTrue(exception.getMessage().contains("Too many incorrect OTP attempts"));
+    }
+
+    @Test
+    @DisplayName("FIREBASE AUTH TEST: Verify user authentication with Firebase Token")
+    void testAuthenticateWithFirebase_Success() {
+        com.foodconnect.dto.request.FirebaseTokenRequest request = com.foodconnect.dto.request.FirebaseTokenRequest.builder()
+                .idToken("mock_firebase_id_token")
+                .phone("+919876543210")
+                .role(com.foodconnect.enums.UserRole.DONOR)
+                .build();
+
+        com.foodconnect.entity.User user = com.foodconnect.entity.User.builder()
+                .id(UUID.randomUUID())
+                .phone("+919876543210")
+                .email("phone_919876543210@foodconnect.app")
+                .role(com.foodconnect.enums.UserRole.DONOR)
+                .isActive(true)
+                .build();
+
+        com.foodconnect.entity.RefreshToken refreshToken = com.foodconnect.entity.RefreshToken.builder()
+                .token("mock_refresh_token")
+                .build();
+
+        when(userRepository.findByPhone("+919876543210")).thenReturn(Optional.of(user));
+        when(userRepository.save(any())).thenReturn(user);
+        when(tokenProvider.generateToken(any())).thenReturn("mock_jwt_token");
+        when(refreshTokenRepository.save(any())).thenReturn(refreshToken);
+        when(userMapper.toResponse(any())).thenReturn(new com.foodconnect.dto.response.UserResponse());
+
+        com.foodconnect.dto.response.JwtAuthResponse response = authService.authenticateWithFirebase(request);
+
+        assertNotNull(response);
+        assertEquals("mock_jwt_token", response.getAccessToken());
+        assertEquals("mock_refresh_token", response.getRefreshToken());
     }
 }

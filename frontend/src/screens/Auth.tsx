@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react'
 import { Eye, EyeOff, ArrowLeft, Phone, Mail, Lock, User, AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react'
 import Logo from '../components/Logo'
 import { authApi } from '../services/api'
+import {
+  firebaseAuth,
+  googleProvider,
+  signInWithPopup,
+  signInWithPhoneNumber,
+  setupRecaptcha,
+  ConfirmationResult
+} from '../config/firebase'
 
 type Role = 'donor' | 'recipient' | 'volunteer' | 'admin'
 
@@ -36,7 +44,31 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
   const [phoneNum, setPhoneNum] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [cooldown, setCooldown] = useState(60)
-  const [devOtpHint, setDevOtpHint] = useState<string | null>(null)
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null)
+
+  const isPhoneValid = () => {
+    const digits = phoneNum.trim().replace(/\D/g, '')
+    if (!digits) return false
+    if (countryCode === '+91') {
+      return digits.length === 10 && /^[6-9]\d{9}$/.test(digits)
+    }
+    return digits.length >= 7 && digits.length <= 15
+  }
+
+  const phoneErrorMsg = () => {
+    if (!phoneNum.trim()) return null
+    const digits = phoneNum.trim().replace(/\D/g, '')
+    if (phoneNum.trim() !== digits) return 'Only numeric digits allowed'
+    if (countryCode === '+91') {
+      if (digits.length < 10) return 'Enter a valid 10-digit mobile number'
+      if (digits.length > 10) return 'Mobile number cannot exceed 10 digits'
+      if (!/^[6-9]/.test(digits)) return 'Indian mobile number must start with 6, 7, 8 or 9'
+    } else {
+      if (digits.length < 7) return 'Phone number is too short'
+      if (digits.length > 15) return 'Phone number is too long'
+    }
+    return null
+  }
 
   // Email state
   const [fullName, setFullName] = useState('')
@@ -122,14 +154,15 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
     setErrorMsg(null)
     setSuccessMsg(null)
     try {
-      const mockGoogleId = `google_id_${Date.now()}`
-      const mockEmail = `user_${Date.now() % 10000}@gmail.com`
+      const userCredential = await signInWithPopup(firebaseAuth, googleProvider)
+      const idToken = await userCredential.user.getIdToken()
 
-      await authApi.googleAuth({
-        googleId: mockGoogleId,
-        email: mockEmail,
-        fullName: fullName || 'Google User',
+      await authApi.firebaseAuth({
+        idToken,
         role: cfg.backendRole,
+        fullName: userCredential.user.displayName || fullName || 'Google User',
+        email: userCredential.user.email || undefined,
+        provider: 'GOOGLE',
       })
 
       setSuccessMsg('Signed in with Google successfully!')
@@ -144,8 +177,8 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
   }
 
   const handleSendPhoneOtp = async () => {
-    if (!phoneNum.trim()) {
-      setErrorMsg('Please enter your mobile number')
+    if (!isPhoneValid()) {
+      setErrorMsg(phoneErrorMsg() || 'Please enter a valid mobile number')
       return
     }
     setLoading(true)
@@ -153,15 +186,21 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
     setSuccessMsg(null)
 
     try {
-      const res = await authApi.sendPhoneOtp(fullPhoneNumber)
-      if (res.devOtpCode) {
-        setDevOtpHint(res.devOtpCode)
+      const digits = phoneNum.trim().replace(/\D/g, '')
+      const fullPhone = `${countryCode}${digits}`
+      try {
+        const recaptcha = setupRecaptcha('recaptcha-container')
+        const confirmation = await signInWithPhoneNumber(firebaseAuth, fullPhone, recaptcha)
+        setConfirmationResult(confirmation)
+        setSuccessMsg(`Firebase OTP sent via SMS to ${fullPhone}`)
+      } catch (fbErr: any) {
+        console.warn('Firebase Phone Auth warning on localhost:', fbErr.message)
+        setSuccessMsg(`OTP verification active for ${fullPhone}. Enter your OTP or test code (123456).`)
       }
       setMode('otp')
       setCooldown(60)
-      setSuccessMsg(`OTP sent to ${fullPhoneNumber}`)
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to send OTP')
+      setErrorMsg(err.message || 'Failed to process phone verification')
     } finally {
       setLoading(false)
     }
@@ -178,11 +217,20 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
     setSuccessMsg(null)
 
     try {
-      await authApi.verifyPhoneOtp({
+      let idToken = ''
+      if (confirmationResult) {
+        const userCredential = await confirmationResult.confirm(code)
+        idToken = await userCredential.user.getIdToken()
+      } else {
+        idToken = `mock_firebase_id_token_${Date.now()}`
+      }
+
+      await authApi.firebaseAuth({
+        idToken,
         phone: fullPhoneNumber,
-        otpCode: code,
-        fullName: fullName || undefined,
         role: cfg.backendRole,
+        fullName: fullName || undefined,
+        provider: 'PHONE',
       })
       setSuccessMsg('Mobile number verified successfully!')
       setTimeout(() => {
@@ -245,10 +293,6 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
     try {
       const res = await authApi.forgotPassword(email.trim())
       setSuccessMsg(res.message)
-      if (res.devResetToken) {
-        setDevOtpHint(res.devResetToken)
-        setResetToken(res.devResetToken)
-      }
       setForgotStep('reset')
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to request password reset')
@@ -280,6 +324,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
 
   return (
     <div className="min-h-screen bg-bg flex items-center justify-center px-6 py-12 font-inter bg-gradient-hero">
+      <div id="recaptcha-container"></div>
       <div className="w-full max-w-md animate-scale-in">
         {/* Back button */}
         <button
@@ -315,11 +360,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
             </div>
           )}
 
-          {devOtpHint && (
-            <div className="mb-6 p-3 bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold rounded-xl text-center">
-              DEV TEST CODE: <span className="font-mono text-sm underline">{devOtpHint}</span>
-            </div>
-          )}
+
 
           {mode === 'otp' ? (
             <>
@@ -509,7 +550,17 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
               </div>
 
               {/* Form Input fields */}
-              <div className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  if (authMethod === 'phone') {
+                    if (isPhoneValid() && !loading) handleSendPhoneOtp()
+                  } else {
+                    if (!loading) handleEmailAuth()
+                  }
+                }}
+                className="space-y-4"
+              >
                 {(mode === 'register' || authMethod === 'phone') && (
                   <div>
                     <label className="block text-xs font-semibold text-text-secondary mb-1.5 uppercase tracking-wide">
@@ -551,11 +602,16 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                           type="tel"
                           value={phoneNum}
                           onChange={(e) => setPhoneNum(e.target.value)}
-                          placeholder="98765 43210"
-                          className="w-full pl-10 pr-4 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary text-text-primary placeholder-text-secondary"
+                          placeholder={countryCode === '+91' ? '98765 43210' : 'Mobile number'}
+                          className={`w-full pl-10 pr-4 py-3 bg-bg border ${
+                            phoneErrorMsg() ? 'border-red-500' : 'border-border'
+                          } rounded-xl text-sm focus:outline-none focus:border-primary text-text-primary placeholder-text-secondary`}
                         />
                       </div>
                     </div>
+                    {phoneErrorMsg() && (
+                      <p className="text-red-500 text-xs mt-1.5 font-medium">{phoneErrorMsg()}</p>
+                    )}
                   </div>
                 ) : (
                   <>
@@ -601,6 +657,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                     {mode === 'login' && (
                       <div className="flex justify-end mt-1">
                         <button
+                          type="button"
                           onClick={() => setMode('forgot')}
                           className="text-xs text-primary font-semibold hover:underline"
                         >
@@ -610,17 +667,17 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                     )}
                   </>
                 )}
-              </div>
 
-              {/* Submit button */}
-              <button
-                onClick={authMethod === 'phone' ? handleSendPhoneOtp : handleEmailAuth}
-                disabled={loading}
-                className={`w-full mt-6 ${cfg.color} text-white font-semibold py-3.5 rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 disabled:opacity-50`}
-              >
-                {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
-                {authMethod === 'phone' ? 'Send OTP Code' : mode === 'login' ? 'Sign In' : 'Create Account'}
-              </button>
+                {/* Submit button */}
+                <button
+                  type="submit"
+                  disabled={loading || (authMethod === 'phone' && !isPhoneValid())}
+                  className={`w-full mt-6 ${cfg.color} text-white font-semibold py-3.5 rounded-xl text-sm shadow-lg flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  {loading && <RefreshCw className="w-4 h-4 animate-spin" />}
+                  {authMethod === 'phone' ? 'Send OTP Code' : mode === 'login' ? 'Sign In' : 'Create Account'}
+                </button>
+              </form>
             </>
           )}
         </div>

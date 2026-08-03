@@ -44,6 +44,34 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     {'code': '+971', 'flag': 'AE', 'name': 'UAE'},
   ];
 
+  bool get _isPhoneValid {
+    final digits = _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return false;
+    if (_selectedCountryCode == '+91') {
+      return digits.length == 10 && RegExp(r'^[6-9]\d{9}$').hasMatch(digits);
+    } else {
+      return digits.length >= 7 && digits.length <= 15;
+    }
+  }
+
+  String? get _phoneValidationError {
+    final raw = _phoneController.text.trim();
+    if (raw.isEmpty) return null;
+    final digits = raw.replaceAll(RegExp(r'\D'), '');
+    if (raw.length != digits.length) {
+      return 'Only numbers are allowed';
+    }
+    if (_selectedCountryCode == '+91') {
+      if (digits.length < 10) return 'Enter a valid 10-digit mobile number';
+      if (digits.length > 10) return 'Mobile number cannot exceed 10 digits';
+      if (!RegExp(r'^[6-9]').hasMatch(digits)) return 'Indian mobile number must start with 6, 7, 8 or 9';
+    } else {
+      if (digits.length < 7) return 'Phone number is too short';
+      if (digits.length > 15) return 'Phone number is too long';
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -68,7 +96,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
 
     try {
-      // Authenticate with Google / Backend Verification
       final mockGoogleId = 'google_user_${DateTime.now().millisecondsSinceEpoch}';
       final mockEmail = 'user_${DateTime.now().millisecondsSinceEpoch % 10000}@gmail.com';
 
@@ -96,15 +123,15 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   Future<void> _handleSendPhoneOtp() async {
-    final rawPhone = _phoneController.text.trim();
-    if (rawPhone.isEmpty) {
+    if (!_isPhoneValid) {
       setState(() {
-        _errorMessage = 'Please enter your phone number';
+        _errorMessage = _phoneValidationError ?? 'Please enter a valid phone number';
       });
       return;
     }
 
-    final fullPhone = '$_selectedCountryCode$rawPhone';
+    final digits = _phoneController.text.trim().replaceAll(RegExp(r'\D'), '');
+    final fullPhone = '$_selectedCountryCode$digits';
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -112,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
 
     try {
-      final res = await ApiService.sendPhoneOtp(fullPhone);
+      await ApiService.sendPhoneOtp(fullPhone);
       setState(() {
         _isLoading = false;
       });
@@ -125,7 +152,6 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
             phone: fullPhone,
             role: widget.initialRole,
             onSuccess: widget.onSuccess,
-            initialDevOtpCode: res['devOtpCode']?.toString(),
           ),
         ),
       );
@@ -506,14 +532,24 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                     child: TextField(
                                       controller: _phoneController,
                                       keyboardType: TextInputType.phone,
+                                      textInputAction: TextInputAction.go,
+                                      onChanged: (val) {
+                                        setState(() {});
+                                      },
+                                      onSubmitted: (_) {
+                                        if (_isPhoneValid && !_isLoading) {
+                                          _handleSendPhoneOtp();
+                                        }
+                                      },
                                       decoration: InputDecoration(
-                                        hintText: '98765 43210',
+                                        hintText: _selectedCountryCode == '+91' ? '98765 43210' : 'Mobile number',
                                         filled: true,
                                         fillColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(12),
                                           borderSide: BorderSide.none,
                                         ),
+                                        errorText: _phoneValidationError,
                                       ),
                                     ),
                                   ),
@@ -521,12 +557,13 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               ),
                               const SizedBox(height: 24),
                               ElevatedButton(
-                                onPressed: _isLoading ? null : _handleSendPhoneOtp,
+                                onPressed: (_isPhoneValid && !_isLoading) ? _handleSendPhoneOtp : null,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: theme.colorScheme.primary,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(vertical: 16),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  disabledBackgroundColor: isDark ? Colors.grey[800] : Colors.grey[300],
                                 ),
                                 child: _isLoading
                                     ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
@@ -543,6 +580,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 if (_isRegisterMode) ...[
                                   TextField(
                                     controller: _fullNameController,
+                                    textInputAction: TextInputAction.next,
                                     decoration: InputDecoration(
                                       labelText: 'Full Name',
                                       filled: true,
@@ -555,6 +593,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 TextField(
                                   controller: _emailController,
                                   keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
                                   decoration: InputDecoration(
                                     labelText: 'Email Address',
                                     filled: true,
@@ -566,6 +605,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                                 TextField(
                                   controller: _passwordController,
                                   obscureText: _obscurePassword,
+                                  textInputAction: TextInputAction.done,
+                                  onSubmitted: (_) {
+                                    if (!_isLoading) {
+                                      _handleEmailAuth();
+                                    }
+                                  },
                                   decoration: InputDecoration(
                                     labelText: 'Password',
                                     filled: true,

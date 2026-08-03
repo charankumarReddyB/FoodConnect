@@ -84,6 +84,36 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>> authenticateWithFirebase({
+    required String idToken,
+    String? phone,
+    String? email,
+    String? fullName,
+    String role = 'DONOR',
+    String? provider,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/firebase'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'idToken': idToken,
+        'phone': phone,
+        'email': email,
+        'fullName': fullName,
+        'role': role,
+        'provider': provider,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 && data['success'] == true) {
+      authToken = data['data']['accessToken'];
+      return data['data'];
+    } else {
+      throw Exception(data['message'] ?? 'Firebase authentication failed');
+    }
+  }
+
   static Future<Map<String, dynamic>> sendPhoneOtp(String phone) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/otp/send'),

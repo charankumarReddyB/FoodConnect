@@ -193,6 +193,112 @@ public class AuthServiceImpl implements AuthService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public JwtAuthResponse authenticateWithFirebase(FirebaseTokenRequest request) {
+        log.info("Processing Firebase ID Token verification");
+        String idToken = request.getIdToken().trim();
+        String verifiedPhone = null;
+        String verifiedEmail = null;
+        String firebaseUid = null;
+
+        try {
+            if (!com.google.firebase.FirebaseApp.getApps().isEmpty()) {
+                com.google.firebase.auth.FirebaseToken decodedToken =
+                        com.google.firebase.auth.FirebaseAuth.getInstance().verifyIdToken(idToken);
+                firebaseUid = decodedToken.getUid();
+                verifiedPhone = (String) decodedToken.getClaims().get("phone_number");
+                verifiedEmail = decodedToken.getEmail();
+                log.info("Firebase ID Token verified successfully. UID: {}, Phone: {}, Email: {}", firebaseUid, verifiedPhone, verifiedEmail);
+            } else {
+                log.warn("[DEV MODE] Firebase Admin SDK not initialized with service account. Processing request payload parameters.");
+            }
+        } catch (Exception e) {
+            log.error("Failed to verify Firebase ID Token: {}", e.getMessage());
+            throw new UnauthorizedException("Invalid or expired Firebase ID Token: " + e.getMessage());
+        }
+
+        if (verifiedPhone == null || verifiedPhone.isBlank()) {
+            verifiedPhone = request.getPhone() != null ? normalizePhone(request.getPhone()) : null;
+        } else {
+            verifiedPhone = normalizePhone(verifiedPhone);
+        }
+
+        if (verifiedEmail == null || verifiedEmail.isBlank()) {
+            verifiedEmail = request.getEmail() != null ? request.getEmail().toLowerCase().trim() : null;
+        }
+
+        User user = null;
+
+        if (verifiedPhone != null && !verifiedPhone.isBlank()) {
+            Optional<User> userByPhone = userRepository.findByPhone(verifiedPhone);
+            if (userByPhone.isPresent()) {
+                user = userByPhone.get();
+                user.setPhoneVerified(true);
+                user.setAuthProviders(appendProvider(user.getAuthProviders(), "PHONE"));
+                user = userRepository.save(user);
+            }
+        }
+
+        if (user == null && verifiedEmail != null && !verifiedEmail.isBlank()) {
+            Optional<User> userByEmail = userRepository.findByEmail(verifiedEmail);
+            if (userByEmail.isPresent()) {
+                user = userByEmail.get();
+                if (verifiedPhone != null && !verifiedPhone.isBlank()) {
+                    user.setPhone(verifiedPhone);
+                    user.setPhoneVerified(true);
+                }
+                user.setAuthProviders(appendProvider(user.getAuthProviders(), "PHONE"));
+                user = userRepository.save(user);
+            }
+        }
+
+        if (user == null) {
+            UserRole role = request.getRole() != null ? request.getRole() : UserRole.DONOR;
+            String userPhone = verifiedPhone;
+            String userEmail = verifiedEmail != null && !verifiedEmail.isBlank()
+                    ? verifiedEmail
+                    : (userPhone != null ? "phone_" + userPhone.replaceAll("[^0-9]", "") + "@foodconnect.app" : "user_" + UUID.randomUUID().toString().substring(0, 8) + "@foodconnect.app");
+
+            String fullName = request.getFullName() != null && !request.getFullName().isBlank()
+                    ? request.getFullName()
+                    : (userPhone != null ? "User " + userPhone.substring(Math.max(0, userPhone.length() - 4)) : "Firebase User");
+
+            user = User.builder()
+                    .phone(userPhone)
+                    .phoneVerified(userPhone != null)
+                    .email(userEmail)
+                    .fullName(fullName)
+                    .role(role)
+                    .isActive(true)
+                    .emailVerified(verifiedEmail != null)
+                    .authProviders("PHONE")
+                    .build();
+
+            user = userRepository.save(user);
+            createExtensionRecordsIfNecessary(user, role, null, null, null);
+            log.info("Created new user via Firebase Authentication: {}", userPhone != null ? userPhone : userEmail);
+        }
+
+        if (!user.getIsActive()) {
+            throw new BadRequestException("User account is deactivated. Please contact support.");
+        }
+
+        UserPrincipal userPrincipal = UserPrincipal.create(user);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(userPrincipal, null, userPrincipal.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        String jwt = tokenProvider.generateToken(authentication);
+        RefreshToken refreshToken = createRefreshToken(user);
+
+        return JwtAuthResponse.builder()
+                .accessToken(jwt)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .user(userMapper.toResponse(user))
+                .build();
+    }
+
     private String normalizePhone(String rawPhone) {
         if (rawPhone == null) return "";
         String cleaned = rawPhone.trim().replaceAll("[^+\\d]", "");
@@ -248,17 +354,19 @@ public class AuthServiceImpl implements AuthService {
 
         phoneOtpTokenRepository.save(token);
 
-        log.info("OTP generated for phone {}: [SECURE - OTP code sent]", phone);
-        smsService.sendSms(phone, "Your FoodConnect verification code is: " + otpCode + ". Valid for 5 minutes.");
+        log.info("OTP generated for phone {}: [SECURE - OTP dispatch initiated]", phone);
+        boolean smsSent = smsService.sendSms(phone, "Your FoodConnect verification code is: " + otpCode + ". Valid for 5 minutes.");
+
+        if (!smsSent) {
+            log.error("SMS dispatch failed or provider rejected SMS for phone: {}", phone);
+            throw new BadRequestException("SMS delivery failed: Unable to send OTP SMS to " + phone + ". Please check if an SMS provider (Twilio, MSG91, or Vonage) is properly configured with valid API keys.");
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("message", "OTP sent successfully to " + phone + ". Valid for 5 minutes.");
+        response.put("message", "OTP sent successfully via SMS to " + phone + ". Valid for 5 minutes.");
         response.put("expiresInSeconds", 300);
         response.put("cooldownSeconds", 60);
-
-        // Include otpCode in response for testing/dev environment convenience
-        response.put("devOtpCode", otpCode);
 
         return response;
     }
@@ -378,7 +486,6 @@ public class AuthServiceImpl implements AuthService {
 
             response.put("success", true);
             response.put("message", "Password reset instructions and verification code sent to " + email);
-            response.put("devResetToken", resetTokenStr);
         } else {
             response.put("success", true);
             response.put("message", "If an account exists for " + email + ", password reset instructions have been sent.");

@@ -7,14 +7,12 @@ class OtpScreen extends StatefulWidget {
   final String phone;
   final String role;
   final VoidCallback onSuccess;
-  final String? initialDevOtpCode;
 
   const OtpScreen({
     super.key,
     required this.phone,
     this.role = 'DONOR',
     required this.onSuccess,
-    this.initialDevOtpCode,
   });
 
   @override
@@ -34,12 +32,10 @@ class _OtpScreenState extends State<OtpScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   String? _successMessage;
-  String? _devOtpHint;
 
   @override
   void initState() {
     super.initState();
-    _devOtpHint = widget.initialDevOtpCode;
     _startTimers();
   }
 
@@ -133,13 +129,10 @@ class _OtpScreenState extends State<OtpScreen> {
     });
 
     try {
-      final res = await ApiService.sendPhoneOtp(widget.phone);
+      await ApiService.sendPhoneOtp(widget.phone);
       setState(() {
         _isLoading = false;
-        _successMessage = 'A new OTP has been sent to ${widget.phone}';
-        if (res.containsKey('devOtpCode')) {
-          _devOtpHint = res['devOtpCode'].toString();
-        }
+        _successMessage = 'A new OTP has been sent via SMS to ${widget.phone}';
       });
       _startTimers();
     } catch (e) {
@@ -250,27 +243,6 @@ class _OtpScreenState extends State<OtpScreen> {
                 const SizedBox(height: 16),
               ],
 
-              if (_devOtpHint != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.withOpacity(0.4)),
-                  ),
-                  child: Text(
-                    'Dev Test OTP Code: $_devOtpHint',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.plusJakartaSans(
-                      color: Colors.amber[900],
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
-
               // 6-digit OTP fields
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -282,6 +254,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       controller: _controllers[index],
                       focusNode: _focusNodes[index],
                       keyboardType: TextInputType.number,
+                      textInputAction: index == 5 ? TextInputAction.done : TextInputAction.next,
                       textAlign: TextAlign.center,
                       maxLength: 1,
                       style: GoogleFonts.plusJakartaSans(
@@ -307,13 +280,18 @@ class _OtpScreenState extends State<OtpScreen> {
                           ),
                         ),
                       ),
+                      onSubmitted: (_) {
+                        if (_otpCode.length == 6 && !_isLoading) {
+                          _handleVerify();
+                        }
+                      },
                       onChanged: (val) {
                         if (val.isNotEmpty && index < 5) {
                           _focusNodes[index + 1].requestFocus();
                         } else if (val.isEmpty && index > 0) {
                           _focusNodes[index - 1].requestFocus();
                         }
-                        if (_otpCode.length == 6) {
+                        if (_otpCode.length == 6 && !_isLoading) {
                           _handleVerify();
                         }
                       },

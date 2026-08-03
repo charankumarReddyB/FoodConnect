@@ -16,6 +16,7 @@ public interface AuthService {
 
     // Enhanced Auth Options
     JwtAuthResponse googleAuth(GoogleAuthRequest request);
+    JwtAuthResponse authenticateWithFirebase(FirebaseTokenRequest request);
     Map<String, Object> sendPhoneOtp(SendOtpRequest request);
     JwtAuthResponse verifyPhoneOtp(VerifyOtpRequest request);
     Map<String, Object> forgotPassword(ForgotPasswordRequest request);

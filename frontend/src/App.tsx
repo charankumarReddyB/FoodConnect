@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 import Landing from './screens/Landing'
 import Onboarding from './screens/Onboarding'
@@ -60,6 +60,26 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('landing')
   const [role, setRole] = useState<Role>('donor')
 
+  useEffect(() => {
+    const savedToken = localStorage.getItem('foodconnect_token')
+    const savedUserRaw = localStorage.getItem('foodconnect_user')
+    if (savedToken && savedUserRaw) {
+      try {
+        const user = JSON.parse(savedUserRaw)
+        let matchedRole: Role = 'donor'
+        if (user.role === 'NGO' || user.role === 'ORPHANAGE' || user.role === 'OLD_AGE_HOME' || user.role === 'SHELTER') {
+          matchedRole = 'recipient'
+        } else if (user.role === 'VOLUNTEER') {
+          matchedRole = 'volunteer'
+        } else if (user.role === 'ADMIN') {
+          matchedRole = 'admin'
+        }
+        setRole(matchedRole)
+        setScreen(dashboardForRole[matchedRole])
+      } catch (_) {}
+    }
+  }, [])
+
   if (showSplash) {
     return <SplashScreen onComplete={() => setShowSplash(false)} />
   }
@@ -72,12 +92,38 @@ export default function App() {
   }
 
   const handleAuthSuccess = () => {
+    const savedUserRaw = localStorage.getItem('foodconnect_user')
+    if (savedUserRaw) {
+      try {
+        const user = JSON.parse(savedUserRaw)
+        let matchedRole: Role = role
+        if (user.role === 'NGO' || user.role === 'ORPHANAGE' || user.role === 'OLD_AGE_HOME' || user.role === 'SHELTER') {
+          matchedRole = 'recipient'
+        } else if (user.role === 'VOLUNTEER') {
+          matchedRole = 'volunteer'
+        } else if (user.role === 'ADMIN') {
+          matchedRole = 'admin'
+        } else if (user.role === 'DONOR') {
+          matchedRole = 'donor'
+        }
+        setRole(matchedRole)
+        setScreen(dashboardForRole[matchedRole])
+        return
+      } catch (_) {}
+    }
     setScreen(dashboardForRole[role])
   }
 
+  const handleLogout = () => {
+    localStorage.removeItem('foodconnect_token')
+    localStorage.removeItem('foodconnect_refresh_token')
+    localStorage.removeItem('foodconnect_user')
+    setScreen('landing')
+  }
+
   const navigate = (s: string) => {
-    if (s === 'landing') {
-      setScreen('landing')
+    if (s === 'landing' || s === 'logout') {
+      handleLogout()
     } else {
       setScreen(s as Screen)
     }

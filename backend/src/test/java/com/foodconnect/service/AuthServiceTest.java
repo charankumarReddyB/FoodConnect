@@ -187,12 +187,14 @@ class AuthServiceTest {
         when(phoneOtpTokenRepository.findTopByPhoneOrderByCreatedAtDesc("+919876543210")).thenReturn(Optional.empty());
         when(passwordEncoder.encode(any())).thenReturn("hashed_otp");
         when(phoneOtpTokenRepository.save(any())).thenAnswer(i -> i.getArguments()[0]);
+        when(smsService.sendSms(anyString(), anyString())).thenReturn(true);
 
         Map<String, Object> result = authService.sendPhoneOtp(request);
 
         assertNotNull(result);
         assertTrue((Boolean) result.get("success"));
-        assertNotNull(result.get("devOtpCode"));
+        assertNull(result.get("devOtpCode"));
+        assertNotNull(result.get("message"));
     }
 
     @Test
@@ -244,5 +246,28 @@ class AuthServiceTest {
         when(phoneOtpTokenRepository.findTopByPhoneOrderByCreatedAtDesc("+919876543210")).thenReturn(Optional.of(token));
 
         assertThrows(BadRequestException.class, () -> authService.verifyPhoneOtp(verifyRequest));
+    }
+
+    @Test
+    @DisplayName("Successfully authenticate user with Firebase ID Token")
+    void testAuthenticateWithFirebase_Success() {
+        com.foodconnect.dto.request.FirebaseTokenRequest request = com.foodconnect.dto.request.FirebaseTokenRequest.builder()
+                .idToken("mock_firebase_token")
+                .phone("+919876543210")
+                .role(UserRole.DONOR)
+                .build();
+
+        RefreshToken refreshToken = RefreshToken.builder().token("firebase-ref-token").expiryDate(Instant.now().plusSeconds(600)).build();
+
+        when(userRepository.findByPhone("+919876543210")).thenReturn(Optional.of(mockUser));
+        when(userRepository.save(any())).thenReturn(mockUser);
+        when(tokenProvider.generateToken(any())).thenReturn("firebase.jwt.token");
+        when(refreshTokenRepository.save(any())).thenReturn(refreshToken);
+        when(userMapper.toResponse(mockUser)).thenReturn(UserResponse.builder().phone("+919876543210").build());
+
+        JwtAuthResponse response = authService.authenticateWithFirebase(request);
+
+        assertNotNull(response);
+        assertEquals("firebase.jwt.token", response.getAccessToken());
     }
 }
