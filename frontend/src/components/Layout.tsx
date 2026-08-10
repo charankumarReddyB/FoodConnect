@@ -95,8 +95,13 @@ const userName: Record<Role, string> = {
 }
 
 export default function Layout({ children, screen, role, onNavigate, notifCount = 3 }: LayoutProps) {
-  const items = navItems[role]
-  const colors = roleColors[role]
+  const normalizedRole: Role = (role && String(role).toLowerCase() in navItems)
+    ? (String(role).toLowerCase() as Role)
+    : 'donor'
+  const items = navItems[normalizedRole] || navItems.donor
+  const colors = roleColors[normalizedRole] || roleColors.donor
+  const name = userName[normalizedRole] || 'FoodConnect User'
+  const label = roleLabels[normalizedRole] || 'FoodConnect Member'
 
   return (
     <div className="flex min-h-screen bg-bg font-inter">
@@ -114,11 +119,11 @@ export default function Layout({ children, screen, role, onNavigate, notifCount 
             onClick={() => onNavigate('profile')}
           >
             <div className={`w-9 h-9 rounded-full ${colors.bg} flex items-center justify-center text-white font-semibold text-sm font-poppins`}>
-              {userName[role].charAt(0)}
+              {name.charAt(0)}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-text-primary truncate">{userName[role]}</p>
-              <p className="text-xs text-text-secondary">{roleLabels[role]}</p>
+              <p className="text-sm font-semibold text-text-primary truncate">{name}</p>
+              <p className="text-xs text-text-secondary">{label}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-text-secondary" />
           </div>
