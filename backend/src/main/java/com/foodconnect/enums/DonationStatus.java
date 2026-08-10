@@ -2,6 +2,7 @@ package com.foodconnect.enums;
 
 public enum DonationStatus {
     CREATED,
+    AVAILABLE,
     REQUESTED,
     ACCEPTED,
     VOLUNTEER_ASSIGNED,

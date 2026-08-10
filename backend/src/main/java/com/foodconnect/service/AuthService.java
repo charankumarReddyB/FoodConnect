@@ -10,6 +10,7 @@ import java.util.Map;
 public interface AuthService {
     UserResponse register(RegisterRequest request);
     JwtAuthResponse login(LoginRequest request);
+    JwtAuthResponse adminLogin(LoginRequest request);
     RefreshTokenResponse refreshToken(RefreshTokenRequest request);
     UserResponse getCurrentUser();
     void logout(String token);

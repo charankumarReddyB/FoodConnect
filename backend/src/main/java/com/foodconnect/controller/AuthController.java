@@ -39,6 +39,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
     }
 
+    @PostMapping("/admin/login")
+    @Operation(summary = "Admin Email/Password Login ONLY (Google Sign-In disabled for Admin)")
+    public ResponseEntity<ApiResponse<JwtAuthResponse>> adminLogin(@Valid @RequestBody LoginRequest loginRequest) {
+        JwtAuthResponse response = authService.adminLogin(loginRequest);
+        return ResponseEntity.ok(ApiResponse.success("Admin login successful", response));
+    }
+
     @PostMapping("/google")
     @Operation(summary = "Authenticate or register user with Google OAuth ID Token/Profile")
     public ResponseEntity<ApiResponse<JwtAuthResponse>> googleAuth(@Valid @RequestBody GoogleAuthRequest googleRequest) {

@@ -7,6 +7,7 @@ import com.foodconnect.dto.response.DonationResponse;
 import com.foodconnect.entity.Donation;
 import com.foodconnect.entity.FoodImage;
 import com.foodconnect.entity.User;
+import com.foodconnect.enums.DeliveryMethod;
 import com.foodconnect.enums.DonationStatus;
 import com.foodconnect.enums.FoodType;
 import com.foodconnect.exception.BadRequestException;
@@ -61,8 +62,8 @@ public class DonationServiceImpl implements DonationService {
                 .pickupAddress(request.getPickupAddress())
                 .latitude(request.getLatitude())
                 .longitude(request.getLongitude())
-                .deliveryMethod(request.getDeliveryMethod())
-                .status(DonationStatus.CREATED)
+                .deliveryMethod(request.getDeliveryMethod() != null ? request.getDeliveryMethod() : DeliveryMethod.VOLUNTEER_DELIVERY)
+                .status(DonationStatus.AVAILABLE)
                 .images(new ArrayList<>())
                 .build();
 

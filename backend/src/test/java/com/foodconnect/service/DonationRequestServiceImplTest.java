@@ -46,6 +46,12 @@ class DonationRequestServiceImplTest {
     @Mock
     private OrganizationRepository organizationRepository;
 
+    @Mock
+    private com.foodconnect.repository.VolunteerRepository volunteerRepository;
+
+    @Mock
+    private com.foodconnect.service.FcmService fcmService;
+
     @InjectMocks
     private DonationRequestServiceImpl donationRequestService;
 

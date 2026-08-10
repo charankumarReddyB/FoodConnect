@@ -131,6 +131,42 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
+    public JwtAuthResponse adminLogin(LoginRequest request) {
+        log.info("Attempting Admin authentication for email: {}", request.getEmail());
+
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail().toLowerCase().trim(),
+                        request.getPassword()
+                )
+        );
+
+        User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
+                .orElseThrow(() -> new ResourceNotFoundException("Admin account not found with email: " + request.getEmail()));
+
+        if (user.getRole() != UserRole.ADMIN) {
+            throw new UnauthorizedException("Access denied. Admin credentials and ADMIN role required.");
+        }
+
+        if (!user.getIsActive()) {
+            throw new BadRequestException("Admin account is deactivated.");
+        }
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        String jwt = tokenProvider.generateToken(authentication);
+        RefreshToken refreshToken = createRefreshToken(user);
+        log.info("Admin authenticated successfully: {}", user.getEmail());
+
+        return JwtAuthResponse.builder()
+                .accessToken(jwt)
+                .refreshToken(refreshToken.getToken())
+                .tokenType("Bearer")
+                .user(userMapper.toResponse(user))
+                .build();
+    }
+
+    @Override
+    @Transactional
     public JwtAuthResponse googleAuth(GoogleAuthRequest request) {
         log.info("Processing Google authentication for email: {}, googleId: {}", request.getEmail(), request.getGoogleId());
 
@@ -140,6 +176,9 @@ public class AuthServiceImpl implements AuthService {
 
         if (existingUserByGoogleId.isPresent()) {
             user = existingUserByGoogleId.get();
+            if (user.getRole() == UserRole.ADMIN) {
+                throw new UnauthorizedException("Google Sign-In is prohibited for Admin accounts. Please use Admin Email & Password login.");
+            }
             if (request.getFullName() != null && !request.getFullName().isBlank()) {
                 user.setFullName(request.getFullName());
             }

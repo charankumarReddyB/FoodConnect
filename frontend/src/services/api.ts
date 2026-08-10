@@ -158,6 +158,23 @@ export const authApi = {
     return data
   },
 
+  async adminLogin(credentials: { email: string; password: string }): Promise<JwtAuthResponse> {
+    const response = await fetch(`${API_BASE_URL}/auth/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    })
+    const data = await safeJsonResponse<JwtAuthResponse>(response, 'Admin login failed')
+    if (data?.accessToken) {
+      localStorage.setItem('foodconnect_token', data.accessToken)
+      localStorage.setItem('foodconnect_refresh_token', data.refreshToken)
+      if (data.user) {
+        localStorage.setItem('foodconnect_user', JSON.stringify(data.user))
+      }
+    }
+    return data
+  },
+
   async googleAuth(data: { googleId: string; email: string; fullName: string; profileImageUrl?: string; role?: string }): Promise<JwtAuthResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/google`, {
       method: 'POST',
