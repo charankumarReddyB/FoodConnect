@@ -96,8 +96,8 @@ export default function App() {
     if (savedUserRaw) {
       try {
         const user = JSON.parse(savedUserRaw)
-        let matchedRole: Role = role
-        if (user.role === 'NGO' || user.role === 'ORPHANAGE' || user.role === 'OLD_AGE_HOME' || user.role === 'SHELTER') {
+        let matchedRole: Role = role || 'donor'
+        if (user.role === 'NGO' || user.role === 'ORPHANAGE' || user.role === 'OLD_AGE_HOME' || user.role === 'SHELTER' || user.role === 'RECIPIENT') {
           matchedRole = 'recipient'
         } else if (user.role === 'VOLUNTEER') {
           matchedRole = 'volunteer'
@@ -107,11 +107,13 @@ export default function App() {
           matchedRole = 'donor'
         }
         setRole(matchedRole)
-        setScreen(dashboardForRole[matchedRole])
+        const targetScreen = dashboardForRole[matchedRole] || 'donor-dashboard'
+        setScreen(targetScreen)
         return
       } catch (_) {}
     }
-    setScreen(dashboardForRole[role])
+    const targetScreen = dashboardForRole[role] || 'donor-dashboard'
+    setScreen(targetScreen)
   }
 
   const handleLogout = () => {

@@ -8,6 +8,17 @@ import {
   signOut,
   ConfirmationResult
 } from 'firebase/auth'
+import {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  where
+} from 'firebase/firestore'
 
 export const firebaseConfig = {
   apiKey: "AIzaSyCBb_mGY5mmFsG2tyzj8ljGueVFu6XcJFY",
@@ -22,6 +33,7 @@ export const firebaseConfig = {
 // Initialize Firebase App instance singleton
 export const firebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp()
 export const firebaseAuth = getAuth(firebaseApp)
+export const firestore = getFirestore(firebaseApp)
 export const googleProvider = new GoogleAuthProvider()
 
 googleProvider.setCustomParameters({
