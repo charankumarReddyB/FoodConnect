@@ -36,6 +36,9 @@ public class DeliveryServiceImpl implements DeliveryService {
     private final DonationRepository donationRepository;
     private final VolunteerRepository volunteerRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.foodconnect.repository.firestore.FirestoreDeliveryRepository firestoreDeliveryRepository;
+
     @Override
     @Transactional
     public DeliveryResponse claimDelivery(UUID donationId, UUID volunteerUserId) {
@@ -69,10 +72,11 @@ public class DeliveryServiceImpl implements DeliveryService {
         delivery.setPickupVerificationCode(pickupPin);
         delivery.setDeliveryVerificationCode(deliveryPin);
 
-        donation.setStatus(DonationStatus.ASSIGNED);
+        donation.setStatus(DonationStatus.VOLUNTEER_ASSIGNED);
         donationRepository.save(donation);
 
         Delivery saved = deliveryRepository.save(delivery);
+        try { firestoreDeliveryRepository.save(saved); } catch (Exception ignored) {}
         log.info("Delivery claimed successfully by volunteer ID: {}. Delivery ID: {}", volunteer.getId(), saved.getId());
 
         return mapToResponse(saved);

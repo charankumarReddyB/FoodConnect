@@ -38,6 +38,9 @@ public class DonationServiceImpl implements DonationService {
     private final UserRepository userRepository;
     private final DonationMapper donationMapper;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.foodconnect.repository.firestore.FirestoreDonationRepository firestoreDonationRepository;
+
     @Override
     @Transactional
     public DonationResponse createDonation(UUID donorId, DonationCreateRequest request) {
@@ -75,6 +78,7 @@ public class DonationServiceImpl implements DonationService {
         }
 
         Donation saved = donationRepository.save(donation);
+        try { firestoreDonationRepository.save(saved); } catch (Exception ignored) {}
         log.info("Donation created successfully with ID: {}", saved.getId());
         return donationMapper.toResponse(saved);
     }

@@ -18,6 +18,7 @@ backend/mvnw.cmd
 .env.*.local
 *.pem
 *.key
+*firebase-service-account*.json
 
 # IDE / Editor configuration
 .idea/

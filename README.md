@@ -3,28 +3,30 @@
 ![Java 21](https://img.shields.io/badge/Java-21-orange.svg)
 ![Spring Boot 3](https://img.shields.io/badge/Spring%20Boot-3.3.2-brightgreen.svg)
 ![React 19](https://img.shields.io/badge/React-19-blue.svg)
-![Firebase Auth](https://img.shields.io/badge/Firebase-Auth--foodconnect--bb349-yellow.svg)
+![Firebase Cloud Firestore](https://img.shields.io/badge/Cloud%20Firestore-foodconnect--bb349-yellow.svg)
+![Firebase Storage](https://img.shields.io/badge/Firebase%20Storage-Enabled-blue.svg)
 ![Vercel Live](https://img.shields.io/badge/Vercel-Live-success.svg)
-![Build & Tests](https://img.shields.io/badge/Tests-18%2F18%20Passed-brightgreen.svg)
+![Build & Tests](https://img.shields.io/badge/Tests-56%2F56%20Passed-brightgreen.svg)
 
 **FoodConnect** is a production-ready, location-based surplus food donation and distribution platform designed to eliminate food waste by connecting food donors (restaurants, caterers, households) with NGOs, shelters, orphanages, volunteers, and recipients in real time.
 
 ---
 
-## Live Deployment
+## Live Deployment & Cloud Resources
 
 - **Vercel Web App**: [https://food-connect-kz9s.vercel.app/](https://food-connect-kz9s.vercel.app/)
 - **Firebase Project ID**: `foodconnect-bb349`
+- **Firebase Storage Bucket**: `foodconnect-bb349.firebasestorage.app`
 
 ---
 
-## Key Features & Architecture
+## Architecture & Technology Stack
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      Supabase PostgreSQL / H2 Database                  │
+│              Firebase Cloud Firestore & Firebase Storage                │
 └────────────────────────────────────▲────────────────────────────────────┘
-                                     │ JDBC / JPA
+                                     │ Firestore SDK & REST Sync
 ┌────────────────────────────────────┴────────────────────────────────────┐
 │              Java 21 Spring Boot 3 Backend REST API                     │
 │     (Spring Security, Firebase Admin SDK, JWT Provider, Lombok, Maven)   │
@@ -37,12 +39,12 @@
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Authentication Architecture
-1. **Firebase Phone Authentication**: Real-time phone validation, reCAPTCHA verification, 6-digit OTP confirmation, and Firebase ID Token generation.
-2. **Google OAuth Sign-In**: Firebase `signInWithPopup` integration.
-3. **Backend Firebase Admin SDK**: Spring Boot verifies Firebase ID Tokens on `/api/v1/auth/firebase` before issuing application JWT access and refresh tokens.
-4. **Session Persistence**: Restores session from `localStorage` / `SharedPreferences` on page refresh and routes to role-based dashboards (`DONOR`, `NGO`, `VOLUNTEER`, `ADMIN`).
-5. **Email / Password Security**: BCrypt password hashing, refresh token rotation, and password reset token flow.
+### Key Services & Configuration
+1. **Firebase Authentication**: Real-time phone validation, reCAPTCHA verification, 6-digit OTP confirmation, and Google Sign-In.
+2. **Cloud Firestore**: Primary NoSQL cloud database storing `users`, `organizations`, `donations`, `donation_requests`, `deliveries`, `volunteers`, `check_ins`, `activity_logs`, and `notifications`.
+3. **Firebase Cloud Storage**: Storage bucket for food photos, user profile pictures, and organization verifications.
+4. **Spring Boot Backend**: Java 21 REST API managing business logic, role-based authorization, matching algorithms, and security filters.
+5. **Vercel Web Deployment**: Single Page Application hosting for React Web with rewrite rules.
 
 ---
 
@@ -50,34 +52,28 @@
 
 ```text
 c:\Charan\Food Connect
-├── backend/          # Java 21 Spring Boot 3 Backend API & Firebase Admin SDK
-├── frontend/         # React Web Application (Vite, TypeScript, Firebase Auth)
-├── .gitignore        # Root gitignore
-├── README.md         # Full project documentation & deployment guide
-└── vercel.json       # Vercel Monorepo deployment & API routing rules
+├── backend/          # Java 21 Spring Boot 3 Backend API, Firestore Repositories, & Firebase Admin SDK
+│   └── src/main/resources/firebase/   # Cloud Firestore Rules, Storage Rules, and Indexes
+├── frontend/         # React Web Application (Vite, TypeScript, Firebase Auth & Storage)
+├── firestore.rules   # Cloud Firestore Security Rules
+├── storage.rules     # Firebase Storage Security Rules
+├── firebase.json     # Firebase Project Configuration
+├── vercel.json       # Vercel Monorepo deployment & API routing rules
+└── README.md         # Full project documentation & deployment guide
 ```
 
 ---
 
-## Deployment Guide
+## Automated Test Execution
 
-### Frontend Deployment (Vercel)
-
-The repository includes a root `vercel.json` pre-configured for **Vercel Monorepo Deployment**:
-
+Run backend Java 21 JUnit test suite:
 ```powershell
-# Deploy from root directory using Vercel CLI:
-npx vercel --prod
+cd backend
+.\mvn.cmd test
 ```
 
-#### Firebase Authorized Domain
-Ensure `food-connect-kz9s.vercel.app` is authorized in:
-[Firebase Console](https://console.firebase.google.com/) -> **Authentication -> Settings -> Authorized domains**.
-
----
-
-## Verification & Test Results
-
-- **Backend Automated Test Suite**: `.\mvnw test` — **18/18 tests passed (`BUILD SUCCESS`)**.
-- **React Frontend Typecheck**: `npx tsc --noEmit` — **0 errors**.
-- **Production Build**: `npm run build` — **Built cleanly in 589ms**.
+Run frontend React test suite:
+```powershell
+cd frontend
+npm run test
+```

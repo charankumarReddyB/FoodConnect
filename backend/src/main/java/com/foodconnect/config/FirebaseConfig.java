@@ -32,9 +32,15 @@ public class FirebaseConfig {
             if (Files.exists(Paths.get(serviceAccountPath))) {
                 log.info("Loading Firebase Service Account from file: {}", serviceAccountPath);
                 serviceAccount = new FileInputStream(serviceAccountPath);
+            } else if (Files.exists(Paths.get("src/main/resources/db/firebase-service-account.json"))) {
+                log.info("Loading Firebase Service Account from file: src/main/resources/db/firebase-service-account.json");
+                serviceAccount = new FileInputStream("src/main/resources/db/firebase-service-account.json");
             } else {
                 ClassLoader classLoader = getClass().getClassLoader();
                 serviceAccount = classLoader.getResourceAsStream("firebase-service-account.json");
+                if (serviceAccount == null) {
+                    serviceAccount = classLoader.getResourceAsStream("db/firebase-service-account.json");
+                }
             }
 
             if (serviceAccount != null) {

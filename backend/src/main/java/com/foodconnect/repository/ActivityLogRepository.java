@@ -11,4 +11,5 @@ import java.util.UUID;
 @Repository
 public interface ActivityLogRepository extends JpaRepository<ActivityLog, Long> {
     Page<ActivityLog> findByUserId(UUID userId, Pageable pageable);
+    Page<ActivityLog> findAllByOrderByTimestampDesc(Pageable pageable);
 }

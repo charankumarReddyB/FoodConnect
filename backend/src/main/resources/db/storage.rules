@@ -1,0 +1,30 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isImageBelowSizeLimit(maxSizeMB) {
+      return request.resource.size < maxSizeMB * 1024 * 1024
+          && request.resource.contentType.matches('image/.*');
+    }
+
+    match /food_images/{imageId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isImageBelowSizeLimit(10);
+    }
+
+    match /profiles/{userId}/{imageId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId && isImageBelowSizeLimit(5);
+    }
+
+    match /organizations/{orgId}/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isImageBelowSizeLimit(10);
+    }
+  }
+}

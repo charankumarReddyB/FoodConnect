@@ -1,7 +1,8 @@
 {
-  "description": "Streamline project management with intuitive task tracking and collaboration tools designed for teams to enhance productivity and communication.",
+  "title": "FoodConnect - Surplus Food Redistribution",
+  "description": "FoodConnect connects restaurants, households, NGOs, and volunteers to reduce food waste and feed communities in real time.",
   "robots": {
-    "index": false
+    "index": true
   },
   "accessibility": {
     "addBypassLinks": false,

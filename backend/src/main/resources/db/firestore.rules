@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && getUserData().role == role;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(userId) || hasRole('ADMIN');
+    }
+
+    match /organizations/{orgId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(resource.data.userId) || hasRole('ADMIN');
+    }
+
+    match /donations/{donationId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole('DONOR') || hasRole('ADMIN');
+      allow update: if isOwner(resource.data.donorId) || hasRole('VOLUNTEER') || hasRole('ADMIN');
+      allow delete: if isOwner(resource.data.donorId) || hasRole('ADMIN');
+    }
+
+    match /donation_requests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole('NGO') || hasRole('ADMIN');
+      allow update, delete: if isOwner(resource.data.recipientId) || hasRole('ADMIN');
+    }
+
+    match /deliveries/{deliveryId} {
+      allow read: if isAuthenticated();
+      allow create: if hasRole('VOLUNTEER') || hasRole('ADMIN');
+      allow update: if isOwner(resource.data.volunteerId) || hasRole('ADMIN');
+      allow delete: if hasRole('ADMIN');
+    }
+
+    match /volunteers/{volunteerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(resource.data.userId) || hasRole('ADMIN');
+    }
+
+    match /check_ins/{checkInId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isOwner(resource.data.userId) || hasRole('ADMIN');
+    }
+
+    match /activity_logs/{logId} {
+      allow read: if hasRole('ADMIN');
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId) || hasRole('ADMIN');
+      allow create: if isAuthenticated();
+      allow update: if isOwner(resource.data.userId);
+      allow delete: if isOwner(resource.data.userId) || hasRole('ADMIN');
+    }
+
+    match /settings/{settingKey} {
+      allow read: if isAuthenticated();
+      allow write: if hasRole('ADMIN');
+    }
+  }
+}
