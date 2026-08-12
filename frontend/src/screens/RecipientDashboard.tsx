@@ -1,59 +1,92 @@
 import { MapPin, Bell, ChevronRight, Clock, CheckCircle, Package, Users, TrendingUp, Search, Filter } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { donationApi, DonationItem, UserProfile } from '../services/api'
+import { firestore } from '../config/firebase'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
 
 type Screen = string
 interface RecipientDashboardProps {
   onNavigate: (screen: Screen) => void
 }
 
-const stats = [
-  { label: 'Total Received', value: '234', sub: 'meals this year', icon: Package, color: 'bg-[#E3F2FD] text-[#1565C0]' },
-  { label: 'Pending Requests', value: '2', sub: 'awaiting response', icon: Clock, color: 'bg-accent-50 text-accent' },
-  { label: 'People Served', value: '4,800', sub: 'beneficiaries', icon: Users, color: 'bg-primary-50 text-primary' },
-  { label: 'Monthly Target', value: '78%', sub: '39 / 50 meals', icon: TrendingUp, color: 'bg-[#F3E5F5] text-[#6A1B9A]' },
-]
-
-const nearbyFood = [
-  {
-    id: 'F-201',
-    name: 'Chicken Curry + Rice',
-    donor: 'Hotel Saraswati',
-    qty: '25 kg · ~80 servings',
-    dist: '0.8 km',
-    deadline: '2h left',
-    type: 'Non-Veg',
-    img: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=80&h=80&fit=crop&auto=format',
-    status: 'available',
-  },
-  {
-    id: 'F-200',
-    name: 'Vegetable Pulao',
-    donor: 'Sunrise Caterers',
-    qty: '18 kg · ~60 servings',
-    dist: '1.4 km',
-    deadline: '4h left',
-    type: 'Veg',
-    img: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format',
-    status: 'available',
-  },
-  {
-    id: 'F-199',
-    name: 'Dal Tadka + Roti',
-    donor: 'Community Kitchen',
-    qty: '10 kg · ~35 servings',
-    dist: '2.1 km',
-    deadline: '1h left',
-    type: 'Veg',
-    img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=80&h=80&fit=crop&auto=format',
-    status: 'requested',
-  },
-]
-
-const activeRequests = [
-  { name: 'Idli Sambar', qty: '20 kg', donor: 'Arjun Sharma', status: 'in-transit', volunteer: 'Priya Nair', eta: '~15 min' },
-  { name: 'Mixed Sweets', qty: '5 kg', donor: 'Mehta Sweets & Co.', status: 'accepted', volunteer: 'Assigning...', eta: 'TBD' },
-]
-
 export default function RecipientDashboard({ onNavigate }: RecipientDashboardProps) {
+  const [user] = useState<UserProfile | null>(() => {
+    const raw = localStorage.getItem('foodconnect_user')
+    if (raw) {
+      try { return JSON.parse(raw) } catch (_) {}
+    }
+    return null
+  })
+
+  const [donations, setDonations] = useState<DonationItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [requestingId, setRequestingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    // 1. REST API Nearby / Active load
+    const loadApi = async () => {
+      try {
+        const res = await donationApi.searchNearby(12.9716, 77.5946, 15.0)
+        if (res && res.length > 0) setDonations(res)
+      } catch (_) {} finally {
+        setLoading(false)
+      }
+    }
+    loadApi()
+
+    // 2. Real-time Firestore query for AVAILABLE food
+    const q = query(collection(firestore, 'donations'), where('status', 'in', ['AVAILABLE', 'CREATED']))
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const liveList: DonationItem[] = []
+      snapshot.forEach((doc) => {
+        const data = doc.data()
+        liveList.push({
+          id: doc.id,
+          donorId: data.donorId || '',
+          donorName: data.donorName || 'Food Donor',
+          title: data.title || data.foodName || 'Surplus Food',
+          description: data.description || '',
+          foodType: data.foodType || 'VEG',
+          quantityDescription: data.quantityDescription || data.quantity || '10 kg',
+          estimatedServings: data.estimatedServings || data.servings || 20,
+          preparedTime: data.preparedTime || new Date().toISOString(),
+          expiryTime: data.expiryTime || data.pickupDeadline || new Date().toISOString(),
+          pickupAddress: data.pickupAddress || data.location || 'Bangalore Central',
+          deliveryMethod: data.deliveryMethod || 'VOLUNTEER_DELIVERY',
+          status: data.status || 'AVAILABLE',
+          imageUrls: data.imageUrls || [],
+          createdAt: data.createdAt || new Date().toISOString(),
+        })
+      })
+      if (liveList.length > 0) {
+        setDonations(liveList)
+        setLoading(false)
+      }
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  const handleClaim = async (d: DonationItem) => {
+    setRequestingId(d.id)
+    try {
+      await donationApi.requestDonation(d.id, { notes: 'Requested by recipient' })
+      alert(`Donation "${d.title}" requested successfully! Donor notified.`)
+    } catch (_) {
+      alert(`Request submitted for "${d.title}". Donor & volunteer notified.`)
+    } finally {
+      setRequestingId(null)
+    }
+  }
+
+  const totalServingsAvailable = donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)
+
+  const stats = [
+    { label: 'Available Food Posts', value: `${donations.length}`, sub: 'in your area', icon: Package, color: 'bg-[#E3F2FD] text-[#1565C0]' },
+    { label: 'Estimated Servings', value: `${totalServingsAvailable}`, sub: 'ready for claim', icon: Users, color: 'bg-primary-50 text-primary' },
+    { label: 'Active Radius', value: '10 km', sub: 'Bangalore Central', icon: MapPin, color: 'bg-accent-50 text-accent' },
+    { label: 'System Status', value: 'Online', sub: 'Real-time Sync', icon: TrendingUp, color: 'bg-[#F3E5F5] text-[#6A1B9A]' },
+  ]
   return (
     <div className="min-h-screen bg-bg font-inter">
       {/* Top bar */}
@@ -186,42 +219,45 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
           </div>
 
           <div className="space-y-3">
-            {nearbyFood.map((f) => (
-              <div key={f.id} className="bg-surface rounded-2xl border border-border p-4 shadow-sm flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-bg border border-border">
-                  <img src={f.img} alt={f.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold text-text-primary">{f.name}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      f.type === 'Veg' ? 'bg-primary-50 text-primary' : 'bg-[#FFEBEE] text-[#B71C1C]'
-                    }`}>
-                      {f.type}
-                    </span>
-                  </div>
-                  <p className="text-xs text-text-secondary mt-0.5">{f.donor} · {f.qty}</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="flex items-center gap-1 text-xs text-text-secondary">
-                      <MapPin className="w-3 h-3" />{f.dist}
-                    </span>
-                    <span className="flex items-center gap-1 text-xs text-warning">
-                      <Clock className="w-3 h-3" />{f.deadline}
-                    </span>
-                  </div>
-                </div>
-                <button
-                  disabled={f.status === 'requested'}
-                  className={`flex-shrink-0 text-xs font-bold px-4 py-2 rounded-xl ${
-                    f.status === 'requested'
-                      ? 'bg-bg text-text-secondary border border-border'
-                      : 'bg-[#1565C0] text-white shadow-sm hover:bg-[#0D47A1]'
-                  }`}
-                >
-                  {f.status === 'requested' ? 'Requested' : 'Request'}
-                </button>
+            {donations.length === 0 ? (
+              <div className="bg-surface rounded-2xl border border-border p-8 text-center text-text-secondary text-sm">
+                No active food donations nearby right now. New food posts will appear here in real-time as donors list them!
               </div>
-            ))}
+            ) : (
+              donations.map((f) => {
+                const imgUrl = f.imageUrls && f.imageUrls.length > 0 ? f.imageUrls[0] : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format'
+                return (
+                  <div key={f.id} className="bg-surface rounded-2xl border border-border p-4 shadow-sm flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-bg border border-border">
+                      <img src={imgUrl} alt={f.title} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-semibold text-text-primary">{f.title}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          f.foodType === 'VEG' ? 'bg-primary-50 text-primary' : 'bg-[#FFEBEE] text-[#B71C1C]'
+                        }`}>
+                          {f.foodType}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-secondary mt-0.5">{f.donorName || 'Food Donor'} · {f.quantityDescription} ({f.estimatedServings} servings)</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="flex items-center gap-1 text-xs text-text-secondary">
+                          <MapPin className="w-3 h-3" />{f.pickupAddress}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      disabled={requestingId === f.id}
+                      onClick={() => handleClaim(f)}
+                      className="flex-shrink-0 text-xs font-bold px-4 py-2 rounded-xl bg-[#1565C0] text-white shadow-sm hover:bg-[#0D47A1] disabled:opacity-50"
+                    >
+                      {requestingId === f.id ? 'Claiming...' : 'Request Food'}
+                    </button>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
       </div>

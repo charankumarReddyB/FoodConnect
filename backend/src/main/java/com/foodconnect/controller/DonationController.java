@@ -74,7 +74,7 @@ public class DonationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         PagedResponse<DonationResponse> response = donationService.getDonationsByStatus(
-                status != null ? status : DonationStatus.CREATED, page, size);
+                status != null ? status : DonationStatus.AVAILABLE, page, size);
         return ResponseEntity.ok(ApiResponse.success("Donations fetched", response));
     }
 

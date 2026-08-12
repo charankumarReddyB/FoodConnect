@@ -1,30 +1,25 @@
+import { useState, useEffect } from 'react'
 import { PlusCircle, Package, Clock, CheckCircle, XCircle, TrendingUp, MapPin, Bell, ChevronRight, Leaf, Users } from 'lucide-react'
+import { donationApi, DonationItem, UserProfile } from '../services/api'
+import { firestore } from '../config/firebase'
+import { collection, onSnapshot, query, where } from 'firebase/firestore'
 
 type Screen = string
 interface DonorDashboardProps {
   onNavigate: (screen: Screen) => void
 }
 
-const stats = [
-  { label: 'Total Donations', value: '47', sub: '+3 this week', icon: Package, color: 'bg-primary-50 text-primary', trend: '+6%' },
-  { label: 'Meals Provided', value: '1,240', sub: 'approx. servings', icon: Users, color: 'bg-accent-50 text-accent', trend: '+12%' },
-  { label: 'Food Saved (kg)', value: '312', sub: 'from landfill', icon: Leaf, color: 'bg-[#E3F2FD] text-[#1565C0]', trend: '+8%' },
-  { label: 'Active Donations', value: '3', sub: 'awaiting pickup', icon: Clock, color: 'bg-[#F3E5F5] text-[#6A1B9A]', trend: '' },
-]
-
-const recentDonations = [
-  { id: 'D-1042', name: 'Vegetable Biryani', qty: '15 kg', status: 'delivered', recipient: 'Annapoorna Trust', time: '2h ago', img: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1041', name: 'Sambar & Rice', qty: '8 kg', status: 'in-transit', recipient: 'Hope Shelter', time: '4h ago', img: 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1040', name: 'Paneer Curry', qty: '6 kg', status: 'accepted', recipient: 'Green Hands NGO', time: '1d ago', img: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1039', name: 'Mixed Snacks Box', qty: '4 kg', status: 'pending', recipient: 'Matching...', time: '1d ago', img: 'https://images.unsplash.com/photo-1607920592519-bab2a80a0db2?w=80&h=80&fit=crop&auto=format' },
-]
-
 const statusConfig: Record<string, { label: string; bg: string; text: string; icon: React.ElementType }> = {
-  delivered: { label: 'Delivered', bg: 'bg-success/10', text: 'text-success', icon: CheckCircle },
-  'in-transit': { label: 'In Transit', bg: 'bg-accent-50', text: 'text-accent', icon: TrendingUp },
-  accepted: { label: 'Accepted', bg: 'bg-[#E3F2FD]', text: 'text-[#1565C0]', icon: CheckCircle },
-  pending: { label: 'Pending', bg: 'bg-[#F5F5F5]', text: 'text-text-secondary', icon: Clock },
-  cancelled: { label: 'Cancelled', bg: 'bg-[#FFEBEE]', text: 'text-error', icon: XCircle },
+  DELIVERED: { label: 'Delivered', bg: 'bg-success/10', text: 'text-success', icon: CheckCircle },
+  COMPLETED: { label: 'Completed', bg: 'bg-success/10', text: 'text-success', icon: CheckCircle },
+  IN_TRANSIT: { label: 'In Transit', bg: 'bg-accent-50', text: 'text-accent', icon: TrendingUp },
+  PICKED_UP: { label: 'Picked Up', bg: 'bg-accent-50', text: 'text-accent', icon: TrendingUp },
+  ACCEPTED: { label: 'Accepted', bg: 'bg-[#E3F2FD]', text: 'text-[#1565C0]', icon: CheckCircle },
+  REQUESTED: { label: 'Requested', bg: 'bg-[#FFF3E0]', text: 'text-[#E65100]', icon: Clock },
+  AVAILABLE: { label: 'Available', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Clock },
+  CREATED: { label: 'Available', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Clock },
+  CANCELLED: { label: 'Cancelled', bg: 'bg-[#FFEBEE]', text: 'text-error', icon: XCircle },
+  EXPIRED: { label: 'Expired', bg: 'bg-[#FFEBEE]', text: 'text-error', icon: XCircle },
 }
 
 const quickActions = [
@@ -35,6 +30,86 @@ const quickActions = [
 ]
 
 export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
+  const [user, setUser] = useState<UserProfile | null>(() => {
+    const raw = localStorage.getItem('foodconnect_user')
+    if (raw) {
+      try { return JSON.parse(raw) } catch (_) {}
+    }
+    return null
+  })
+
+  const [donations, setDonations] = useState<DonationItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let unsubscribe: () => void = () => {}
+
+    // 1. Attempt API fetch
+    const loadApiData = async () => {
+      try {
+        if (user?.id) {
+          const res = await donationApi.getMyDonations(user.id)
+          if (res?.content) setDonations(res.content)
+        } else {
+          const res = await donationApi.getDonations()
+          if (res?.content) setDonations(res.content)
+        }
+      } catch (_) {} finally {
+        setLoading(false)
+      }
+    }
+
+    loadApiData()
+
+    // 2. Real-time Cloud Firestore synchronization
+    try {
+      const q = user?.id
+        ? query(collection(firestore, 'donations'), where('donorId', '==', user.id))
+        : collection(firestore, 'donations')
+
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        const liveList: DonationItem[] = []
+        snapshot.forEach((doc) => {
+          const data = doc.data()
+          liveList.push({
+            id: doc.id,
+            donorId: data.donorId || '',
+            donorName: data.donorName || 'Me',
+            title: data.title || data.foodName || 'Surplus Food',
+            description: data.description || '',
+            foodType: data.foodType || 'VEG',
+            quantityDescription: data.quantityDescription || data.quantity || '10 kg',
+            estimatedServings: data.estimatedServings || data.servings || 20,
+            preparedTime: data.preparedTime || new Date().toISOString(),
+            expiryTime: data.expiryTime || data.pickupDeadline || new Date().toISOString(),
+            pickupAddress: data.pickupAddress || data.location || 'Local Address',
+            deliveryMethod: data.deliveryMethod || 'VOLUNTEER_DELIVERY',
+            status: data.status || 'AVAILABLE',
+            imageUrls: data.imageUrls || [],
+            createdAt: data.createdAt || new Date().toISOString(),
+          })
+        })
+        if (liveList.length > 0) {
+          setDonations(liveList)
+          setLoading(false)
+        }
+      })
+    } catch (_) {}
+
+    return () => unsubscribe()
+  }, [user?.id])
+
+  const totalServings = donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)
+  const activeCount = donations.filter(d => d.status === 'AVAILABLE' || d.status === 'CREATED' || d.status === 'REQUESTED' || d.status === 'ACCEPTED').length
+
+  const stats = [
+    { label: 'Total Donations', value: `${donations.length}`, sub: 'recorded in Firestore', icon: Package, color: 'bg-primary-50 text-primary', trend: '+Live' },
+    { label: 'Meals Provided', value: `${totalServings}`, sub: 'approx. servings', icon: Users, color: 'bg-accent-50 text-accent', trend: '+Live' },
+    { label: 'Food Saved (kg)', value: `${Math.round(totalServings * 0.3)}`, sub: 'from landfill', icon: Leaf, color: 'bg-[#E3F2FD] text-[#1565C0]', trend: '' },
+    { label: 'Active Donations', value: `${activeCount}`, sub: 'available / pending', icon: Clock, color: 'bg-[#F3E5F5] text-[#6A1B9A]', trend: '' },
+  ]
+
+  const userNameDisplay = user?.fullName || 'Food Donor'
   return (
     <div className="min-h-screen bg-bg font-inter">
       {/* Top bar */}
@@ -121,33 +196,41 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
             </button>
           </div>
           <div className="bg-surface rounded-2xl border border-border shadow-sm overflow-hidden">
-            {recentDonations.map((d, i) => {
-              const sc = statusConfig[d.status]
-              return (
-                <div
-                  key={d.id}
-                  className={`flex items-center gap-4 p-4 hover:bg-bg cursor-pointer ${i < recentDonations.length - 1 ? 'border-b border-border' : ''}`}
-                >
-                  <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-bg border border-border">
-                    <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-text-primary truncate">{d.name}</p>
-                      <span className="text-xs text-text-secondary hidden sm:block">· {d.qty}</span>
+            {donations.length === 0 ? (
+              <div className="p-8 text-center text-text-secondary text-sm">
+                No food donations posted yet. Click <span className="font-semibold text-primary">Post Food Now</span> to list your surplus food in Cloud Firestore!
+              </div>
+            ) : (
+              donations.slice(0, 5).map((d, i) => {
+                const sc = statusConfig[d.status] || statusConfig.AVAILABLE
+                const imgUrl = d.imageUrls && d.imageUrls.length > 0 ? d.imageUrls[0] : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format'
+                return (
+                  <div
+                    key={d.id}
+                    className={`flex items-center gap-4 p-4 hover:bg-bg cursor-pointer ${i < donations.length - 1 ? 'border-b border-border' : ''}`}
+                    onClick={() => onNavigate('history')}
+                  >
+                    <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-bg border border-border">
+                      <img src={imgUrl} alt={d.title} className="w-full h-full object-cover" />
                     </div>
-                    <p className="text-xs text-text-secondary mt-0.5">{d.recipient} · {d.time}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-text-primary truncate">{d.title}</p>
+                        <span className="text-xs text-text-secondary hidden sm:block">· {d.quantityDescription}</span>
+                      </div>
+                      <p className="text-xs text-text-secondary mt-0.5">{d.pickupAddress} · {d.estimatedServings} servings</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${sc.bg} ${sc.text}`}>
+                        <sc.icon className="w-3.5 h-3.5" />
+                        {sc.label}
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-text-secondary" />
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${sc.bg} ${sc.text}`}>
-                      <sc.icon className="w-3.5 h-3.5" />
-                      {sc.label}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-text-secondary" />
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
         </div>
 

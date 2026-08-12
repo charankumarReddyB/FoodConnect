@@ -121,6 +121,17 @@ public class FirestoreDonationRepository {
         map.put("pickupAddress", donation.getPickupAddress());
         map.put("latitude", donation.getLatitude());
         map.put("longitude", donation.getLongitude());
+        if (donation.getImages() != null && !donation.getImages().isEmpty()) {
+            List<String> urls = new ArrayList<>();
+            for (com.foodconnect.entity.FoodImage img : donation.getImages()) {
+                if (img.getImageUrl() != null) urls.add(img.getImageUrl());
+            }
+            map.put("imageUrls", urls);
+        } else {
+            map.put("imageUrls", new ArrayList<>());
+        }
+        map.put("createdAt", donation.getCreatedAt() != null ? donation.getCreatedAt().toString() : OffsetDateTime.now().toString());
+        map.put("updatedAt", donation.getUpdatedAt() != null ? donation.getUpdatedAt().toString() : OffsetDateTime.now().toString());
         return map;
     }
 
@@ -149,6 +160,10 @@ public class FirestoreDonationRepository {
         d.setPickupAddress(doc.getString("pickupAddress"));
         d.setLatitude(doc.getDouble("latitude"));
         d.setLongitude(doc.getDouble("longitude"));
+        String ca = doc.getString("createdAt");
+        if (ca != null) d.setCreatedAt(OffsetDateTime.parse(ca));
+        String ua = doc.getString("updatedAt");
+        if (ua != null) d.setUpdatedAt(OffsetDateTime.parse(ua));
         return d;
     }
 }

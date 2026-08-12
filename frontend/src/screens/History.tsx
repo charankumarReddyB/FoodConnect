@@ -1,5 +1,8 @@
 import { ArrowLeft, Package, CheckCircle, Clock, XCircle, TrendingUp, Filter, ChevronRight, Search } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { donationApi, DonationItem, UserProfile } from '../services/api'
+import { firestore } from '../config/firebase'
+import { collection, onSnapshot } from 'firebase/firestore'
 
 type Role = 'donor' | 'recipient' | 'volunteer' | 'admin'
 interface HistoryProps {
@@ -7,36 +10,93 @@ interface HistoryProps {
   role: Role
 }
 
-const donationHistory = [
-  { id: 'D-1042', name: 'Vegetable Biryani', qty: '15 kg', recipient: 'Annapoorna Trust', date: 'Jul 28, 2025', status: 'delivered', img: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1041', name: 'Sambar & Rice', qty: '8 kg', recipient: 'Hope Shelter', date: 'Jul 27, 2025', status: 'delivered', img: 'https://images.unsplash.com/photo-1574484284002-952d92456975?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1040', name: 'Paneer Curry', qty: '6 kg', recipient: 'Green Hands NGO', date: 'Jul 26, 2025', status: 'delivered', img: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1039', name: 'Mixed Snacks Box', qty: '4 kg', recipient: 'N/A', date: 'Jul 25, 2025', status: 'expired', img: 'https://images.unsplash.com/photo-1607920592519-bab2a80a0db2?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1038', name: 'Chicken Biriyani', qty: '20 kg', recipient: 'Bethany Shelter', date: 'Jul 24, 2025', status: 'delivered', img: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1037', name: 'Pav Bhaji', qty: '12 kg', recipient: 'Sunrise NGO', date: 'Jul 23, 2025', status: 'delivered', img: 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1036', name: 'Dal Fry + Chapati', qty: '9 kg', recipient: 'Community Kitchen', date: 'Jul 22, 2025', status: 'delivered', img: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=80&h=80&fit=crop&auto=format' },
-  { id: 'D-1035', name: 'Chole Bhature', qty: '7 kg', recipient: 'N/A', date: 'Jul 20, 2025', status: 'cancelled', img: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=80&h=80&fit=crop&auto=format' },
-]
-
 const statusConfig: Record<string, { label: string; bg: string; text: string; icon: React.ElementType }> = {
-  delivered: { label: 'Delivered', bg: 'bg-success/10', text: 'text-success', icon: CheckCircle },
-  'in-transit': { label: 'In Transit', bg: 'bg-accent-50', text: 'text-accent', icon: TrendingUp },
-  pending: { label: 'Pending', bg: 'bg-[#F5F5F5]', text: 'text-text-secondary', icon: Clock },
-  expired: { label: 'Expired', bg: 'bg-warning/10', text: 'text-warning', icon: Clock },
-  cancelled: { label: 'Cancelled', bg: 'bg-[#FFEBEE]', text: 'text-error', icon: XCircle },
+  DELIVERED: { label: 'Delivered', bg: 'bg-success/10', text: 'text-success', icon: CheckCircle },
+  COMPLETED: { label: 'Completed', bg: 'bg-success/10', text: 'text-success', icon: CheckCircle },
+  IN_TRANSIT: { label: 'In Transit', bg: 'bg-accent-50', text: 'text-accent', icon: TrendingUp },
+  PICKED_UP: { label: 'Picked Up', bg: 'bg-accent-50', text: 'text-accent', icon: TrendingUp },
+  ACCEPTED: { label: 'Accepted', bg: 'bg-[#E3F2FD]', text: 'text-[#1565C0]', icon: CheckCircle },
+  REQUESTED: { label: 'Requested', bg: 'bg-[#FFF3E0]', text: 'text-[#E65100]', icon: Clock },
+  AVAILABLE: { label: 'Available', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Clock },
+  CREATED: { label: 'Available', bg: 'bg-emerald-50', text: 'text-emerald-700', icon: Clock },
+  EXPIRED: { label: 'Expired', bg: 'bg-warning/10', text: 'text-warning', icon: Clock },
+  CANCELLED: { label: 'Cancelled', bg: 'bg-[#FFEBEE]', text: 'text-error', icon: XCircle },
 }
 
 export default function History({ onBack }: HistoryProps) {
-  const [filter, setFilter] = useState<'all' | 'delivered' | 'pending' | 'cancelled'>('all')
-  const [query, setQuery] = useState('')
+  const [user] = useState<UserProfile | null>(() => {
+    const raw = localStorage.getItem('foodconnect_user')
+    if (raw) {
+      try { return JSON.parse(raw) } catch (_) {}
+    }
+    return null
+  })
 
-  const filtered = donationHistory.filter((d) => {
-    const matchStatus = filter === 'all' || d.status === filter
-    const matchQuery = d.name.toLowerCase().includes(query.toLowerCase()) || d.recipient.toLowerCase().includes(query.toLowerCase())
+  const [donations, setDonations] = useState<DonationItem[]>([])
+  const [filter, setFilter] = useState<'all' | 'delivered' | 'pending' | 'cancelled'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+
+  useEffect(() => {
+    // 1. REST API load
+    const loadApi = async () => {
+      try {
+        if (user?.id) {
+          const res = await donationApi.getMyDonations(user.id)
+          if (res?.content && res.content.length > 0) setDonations(res.content)
+        } else {
+          const res = await donationApi.getDonations()
+          if (res?.content && res.content.length > 0) setDonations(res.content)
+        }
+      } catch (_) {}
+    }
+    loadApi()
+
+    // 2. Real-time Firestore stream
+    const unsubscribe = onSnapshot(collection(firestore, 'donations'), (snapshot) => {
+      const list: DonationItem[] = []
+      snapshot.forEach((doc) => {
+        const data = doc.data()
+        list.push({
+          id: doc.id,
+          donorId: data.donorId || '',
+          donorName: data.donorName || 'Me',
+          title: data.title || data.foodName || 'Surplus Food',
+          description: data.description || '',
+          foodType: data.foodType || 'VEG',
+          quantityDescription: data.quantityDescription || data.quantity || '10 kg',
+          estimatedServings: data.estimatedServings || data.servings || 20,
+          preparedTime: data.preparedTime || new Date().toISOString(),
+          expiryTime: data.expiryTime || data.pickupDeadline || new Date().toISOString(),
+          pickupAddress: data.pickupAddress || data.location || 'Local Address',
+          deliveryMethod: data.deliveryMethod || 'VOLUNTEER_DELIVERY',
+          status: data.status || 'AVAILABLE',
+          imageUrls: data.imageUrls || [],
+          createdAt: data.createdAt || new Date().toISOString(),
+        })
+      })
+      if (list.length > 0) {
+        setDonations(list)
+      }
+    })
+
+    return () => unsubscribe()
+  }, [user?.id])
+
+  const filtered = donations.filter((d) => {
+    const matchStatus =
+      filter === 'all' ||
+      (filter === 'delivered' && (d.status === 'DELIVERED' || d.status === 'COMPLETED')) ||
+      (filter === 'pending' && (d.status === 'AVAILABLE' || d.status === 'CREATED' || d.status === 'REQUESTED' || d.status === 'ACCEPTED')) ||
+      (filter === 'cancelled' && (d.status === 'CANCELLED' || d.status === 'EXPIRED'))
+
+    const matchQuery =
+      d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      d.pickupAddress.toLowerCase().includes(searchQuery.toLowerCase())
+
     return matchStatus && matchQuery
   })
 
-  const deliveredCount = donationHistory.filter((d) => d.status === 'delivered').length
+  const deliveredCount = donations.filter((d) => d.status === 'DELIVERED' || d.status === 'COMPLETED').length
 
   return (
     <div className="min-h-screen bg-bg font-inter">
@@ -48,7 +108,7 @@ export default function History({ onBack }: HistoryProps) {
           </button>
           <div className="flex-1">
             <h1 className="text-base font-bold text-text-primary font-poppins">Donation History</h1>
-            <p className="text-xs text-text-secondary">{donationHistory.length} total · {deliveredCount} delivered</p>
+            <p className="text-xs text-text-secondary">{donations.length} total · {deliveredCount} delivered</p>
           </div>
           <button className="w-9 h-9 rounded-xl bg-bg border border-border flex items-center justify-center">
             <Filter className="w-4 h-4 text-text-secondary" />
@@ -60,8 +120,8 @@ export default function History({ onBack }: HistoryProps) {
           <input
             type="text"
             placeholder="Search donations..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-4 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary text-text-primary"
           />
         </div>
@@ -86,8 +146,8 @@ export default function History({ onBack }: HistoryProps) {
       <div className="grid grid-cols-3 gap-3 p-4 max-w-2xl mx-auto">
         {[
           { label: 'Delivered', value: deliveredCount, color: 'text-success', bg: 'bg-success/10' },
-          { label: 'Total kg', value: '312', color: 'text-primary', bg: 'bg-primary-50' },
-          { label: 'Meals', value: '1,240', color: 'text-accent', bg: 'bg-accent-50' },
+          { label: 'Total Recorded', value: `${donations.length}`, color: 'text-primary', bg: 'bg-primary-50' },
+          { label: 'Meals Provided', value: `${donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)}`, color: 'text-accent', bg: 'bg-accent-50' },
         ].map((s) => (
           <div key={s.label} className={`${s.bg} rounded-2xl p-4 text-center`}>
             <p className={`text-xl font-extrabold font-poppins ${s.color}`}>{s.value}</p>
@@ -106,23 +166,23 @@ export default function History({ onBack }: HistoryProps) {
           </div>
         ) : (
           filtered.map((d) => {
-            const sc = statusConfig[d.status]
+            const sc = statusConfig[d.status] || statusConfig.AVAILABLE
+            const imgUrl = d.imageUrls && d.imageUrls.length > 0 ? d.imageUrls[0] : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format'
             return (
               <div key={d.id} className="bg-surface rounded-2xl border border-border p-4 flex items-center gap-4 shadow-sm hover:shadow-md cursor-pointer">
                 <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-border">
-                  <img src={d.img} alt={d.name} className="w-full h-full object-cover" />
+                  <img src={imgUrl} alt={d.title} className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-text-primary">{d.name}</p>
-                  <p className="text-xs text-text-secondary mt-0.5">{d.recipient} · {d.qty}</p>
-                  <p className="text-xs text-text-secondary">{d.date}</p>
+                  <p className="text-sm font-semibold text-text-primary">{d.title}</p>
+                  <p className="text-xs text-text-secondary mt-0.5">{d.pickupAddress} · {d.quantityDescription}</p>
+                  <p className="text-xs text-text-secondary">{d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'Today'}</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${sc.bg} ${sc.text}`}>
                     <sc.icon className="w-3.5 h-3.5" />
                     {sc.label}
                   </span>
-                  <span className={`sm:hidden w-2 h-2 rounded-full ${d.status === 'delivered' ? 'bg-success' : d.status === 'expired' ? 'bg-warning' : 'bg-error'}`} />
                   <ChevronRight className="w-4 h-4 text-text-secondary" />
                 </div>
               </div>

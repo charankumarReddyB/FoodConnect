@@ -393,7 +393,7 @@ export const authApi = {
 }
 
 // Donations API
-export const donationsApi = {
+export const donationApi = {
   async createDonation(data: any): Promise<DonationItem> {
     const response = await fetch(`${API_BASE_URL}/donations`, {
       method: 'POST',
@@ -403,14 +403,45 @@ export const donationsApi = {
     return safeJsonResponse<DonationItem>(response, 'Failed to post donation')
   },
 
-  async getNearbyDonations(lat: number, lon: number, radiusKm: number = 10): Promise<DonationItem[]> {
+  async getDonations(status?: string, page = 0, size = 10): Promise<PagedResponse<DonationItem>> {
+    const statusQuery = status ? `?status=${status}&page=${page}&size=${size}` : `?page=${page}&size=${size}`
+    const response = await fetch(`${API_BASE_URL}/donations${statusQuery}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<PagedResponse<DonationItem>>(response, 'Failed to fetch donations')
+  },
+
+  async getMyDonations(donorId: string, page = 0, size = 10): Promise<PagedResponse<DonationItem>> {
+    const response = await fetch(`${API_BASE_URL}/donations/donor/${donorId}?page=${page}&size=${size}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<PagedResponse<DonationItem>>(response, 'Failed to fetch donor donations')
+  },
+
+  async searchNearby(lat: number, lon: number, radiusKm: number = 10): Promise<DonationItem[]> {
     const response = await fetch(`${API_BASE_URL}/donations/nearby?latitude=${lat}&longitude=${lon}&radiusKm=${radiusKm}`, {
       method: 'GET',
       headers: getAuthHeaders(),
     })
     return safeJsonResponse<DonationItem[]>(response, 'Failed to fetch nearby donations')
   },
+
+  async getNearbyDonations(lat: number, lon: number, radiusKm: number = 10): Promise<DonationItem[]> {
+    return this.searchNearby(lat, lon, radiusKm)
+  },
+
+  async requestDonation(donationId: string, payload?: any): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/donations/${donationId}/status?status=REQUESTED`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<any>(response, 'Failed to request donation')
+  },
 }
+
+export const donationsApi = donationApi
 
 // CheckIn API
 export const checkInApi = {
