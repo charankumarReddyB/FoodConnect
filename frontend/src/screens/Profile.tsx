@@ -52,8 +52,11 @@ const badges = [
 ]
 
 export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
-  const theme = roleThemeConfig[role] || roleThemeConfig.donor
-  const stats = defaultRoleStats[role] || defaultRoleStats.donor
+  const normalizedRole: Role = (role && String(role).toLowerCase() in roleThemeConfig)
+    ? (String(role).toLowerCase() as Role)
+    : 'donor'
+  const theme = roleThemeConfig[normalizedRole] || roleThemeConfig.donor
+  const stats = defaultRoleStats[normalizedRole] || defaultRoleStats.donor
 
   const [user, setUser] = useState<UserProfile | null>(() => {
     const saved = localStorage.getItem('foodconnect_user')

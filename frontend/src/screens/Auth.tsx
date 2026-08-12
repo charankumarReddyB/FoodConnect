@@ -83,7 +83,10 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  const cfg = roleConfig[role]
+  const normalizedRole: Role = (role && String(role).toLowerCase() in roleConfig)
+    ? (String(role).toLowerCase() as Role)
+    : 'donor'
+  const cfg = roleConfig[normalizedRole] || roleConfig.donor
 
   useEffect(() => {
     let timer: any
@@ -258,7 +261,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
     setSuccessMsg(null)
 
     try {
-      if (selectedRole === 'ADMIN') {
+      if (cfg.backendRole === 'ADMIN') {
         await authApi.adminLogin({ email: email.trim(), password })
       } else if (mode === 'register') {
         if (!fullName.trim()) {
@@ -533,7 +536,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
               )}
 
               {/* Google Button - Disabled for ADMIN */}
-              {selectedRole !== 'ADMIN' ? (
+              {cfg.backendRole !== 'ADMIN' ? (
                 <button
                   onClick={handleGoogleAuth}
                   disabled={loading}
