@@ -28,6 +28,8 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: 'jsdom',
       setupFiles: './src/test/setup.tsx',
+      include: ['src/test/**/*.test.{ts,tsx}'],
+      exclude: ['**/node_modules/**', '**/e2e/**'],
     },
     resolve: {
       alias: {

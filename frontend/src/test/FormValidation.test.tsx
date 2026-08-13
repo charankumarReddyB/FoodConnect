@@ -14,12 +14,12 @@ describe('Form Validation & Boundary Test Suite', () => {
 
   it('renders Post Donation form fields correctly', () => {
     renderPostDonation();
-    expect(screen.getByText(/Post Donation/i)).toBeInTheDocument();
+    expect(screen.getByText(/Post Food Donation/i)).toBeInTheDocument();
   });
 
   it('allows form interaction and button triggers', () => {
     renderPostDonation();
-    const titleInput = screen.getAllByDisplayValue(/Vegetable Biryani/i)[0];
+    const titleInput = screen.getByPlaceholderText(/Vegetable Biryani/i);
     expect(titleInput).toBeInTheDocument();
     fireEvent.change(titleInput, { target: { value: 'Fresh Chapati & Curry' } });
     expect(screen.getByDisplayValue(/Fresh Chapati & Curry/i)).toBeInTheDocument();

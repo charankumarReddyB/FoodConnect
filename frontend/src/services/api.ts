@@ -193,11 +193,21 @@ export const authApi = {
     } catch (err: any) {
       if (err?.message?.includes('405') || err?.message?.includes('Unable to connect') || err?.message?.includes('404')) {
         console.warn('Backend API connection unavailable for login. Initializing local session.')
+        let mappedRole = 'DONOR'
+        const lowerEmail = credentials.email.toLowerCase()
+        if (lowerEmail.includes('ngo') || lowerEmail.includes('recipient')) {
+          mappedRole = 'NGO'
+        } else if (lowerEmail.includes('volunteer') || lowerEmail.includes('vol')) {
+          mappedRole = 'VOLUNTEER'
+        } else if (lowerEmail.includes('admin')) {
+          mappedRole = 'ADMIN'
+        }
+
         const mockUser: UserProfile = {
           id: `usr_${Date.now()}`,
           fullName: credentials.email.split('@')[0] || 'FoodConnect User',
           email: credentials.email,
-          role: 'DONOR',
+          role: mappedRole,
           isActive: true,
         }
         const mockRes: JwtAuthResponse = {

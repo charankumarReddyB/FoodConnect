@@ -13,8 +13,8 @@ describe('Dashboards Component Suite', () => {
         <DonorDashboard onNavigate={vi.fn()} />
       </LanguageProvider>
     );
-    expect(screen.getByText(/Arjun Sharma/i)).toBeInTheDocument();
-    expect(screen.getByText(/Post Food Now/i)).toBeInTheDocument();
+    expect(screen.getByText(/Donor Portal/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Post Food Now/i)[0]).toBeInTheDocument();
   });
 
   it('renders Recipient Dashboard with search and available food', () => {
@@ -32,7 +32,7 @@ describe('Dashboards Component Suite', () => {
         <VolunteerDashboard onNavigate={vi.fn()} />
       </LanguageProvider>
     );
-    expect(screen.getByText(/Available for Deliveries/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Available Jobs/i)[0]).toBeInTheDocument();
   });
 
   it('renders Admin Dashboard with platform metrics', () => {

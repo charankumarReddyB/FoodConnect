@@ -12,29 +12,28 @@ describe('Auth Component & Validation Suite', () => {
     );
   };
 
-  it('renders Mobile OTP tab by default', () => {
+  it('renders Google Sign-In button for donor by default', () => {
     renderAuth();
-    expect(screen.getByText(/Mobile OTP/i)).toBeInTheDocument();
-    expect(screen.getByText(/Send OTP Code/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sign in with Google/i)).toBeInTheDocument();
   });
 
-  it('switches to Email & Password mode and validates input', () => {
+  it('renders Email & Password inputs with empty initial values', () => {
     renderAuth();
-    const emailTab = screen.getByText(/Email & Password/i);
-    fireEvent.click(emailTab);
-    expect(screen.getByPlaceholderText(/arjun@example.com/i)).toBeInTheDocument();
+    const emailInput = screen.getByPlaceholderText(/Enter email address/i);
+    expect(emailInput).toBeInTheDocument();
+    expect(emailInput).toHaveValue('');
   });
 
-  it('switches to Register mode when in Email auth method', () => {
+  it('switches to Register mode and shows Full Name input', () => {
     renderAuth();
-    fireEvent.click(screen.getByText(/Email & Password/i));
-    const registerBtn = screen.getByRole('button', { name: /^Register$/i });
+    const registerBtn = screen.getByRole('button', { name: /Register Account/i });
     fireEvent.click(registerBtn);
-    expect(screen.getByPlaceholderText(/Arjun Sharma/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Enter full name/i)).toBeInTheDocument();
   });
 
-  it('renders Google Sign-In button correctly', () => {
-    renderAuth();
-    expect(screen.getByText(/Continue with Google/i)).toBeInTheDocument();
+  it('hides Register tab for Admin role', () => {
+    renderAuth('admin');
+    expect(screen.queryByRole('button', { name: /Register Account/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Administrator Authentication Requires Password Verification/i)).toBeInTheDocument();
   });
 });

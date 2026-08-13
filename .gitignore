@@ -33,3 +33,5 @@ Thumbs.db
 .system_generated/
 *.log
 logs/
+frontend/playwright-report/
+frontend/test-results/
