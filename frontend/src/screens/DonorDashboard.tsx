@@ -3,6 +3,7 @@ import { PlusCircle, Package, Clock, CheckCircle, XCircle, TrendingUp, MapPin, B
 import { donationApi, DonationItem, UserProfile } from '../services/api'
 import { firestore } from '../config/firebase'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import DonationDetailsModal from '../components/DonationDetailsModal'
 
 type Screen = string
 interface DonorDashboardProps {
@@ -30,7 +31,7 @@ const quickActions = [
 ]
 
 export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
-  const [user, setUser] = useState<UserProfile | null>(() => {
+  const [user] = useState<UserProfile | null>(() => {
     const raw = localStorage.getItem('foodconnect_user')
     if (raw) {
       try { return JSON.parse(raw) } catch (_) {}
@@ -39,6 +40,7 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
   })
 
   const [donations, setDonations] = useState<DonationItem[]>([])
+  const [selectedDonation, setSelectedDonation] = useState<DonationItem | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -121,42 +123,20 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
     { label: 'Active Donations', value: `${activeCount}`, sub: 'available / pending', icon: Clock, color: 'bg-[#F3E5F5] text-[#6A1B9A]', trend: '' },
   ]
 
-  const userNameDisplay = user?.fullName || 'Food Donor'
   return (
-    <div className="min-h-screen bg-bg font-inter">
-      {/* Top bar */}
-      <div className="bg-surface border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div>
-          <p className="text-xs text-text-secondary">Good morning,</p>
-          <h1 className="text-lg font-bold text-text-primary font-poppins">Arjun Sharma 👋</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <button onClick={() => onNavigate('notifications')} className="relative w-10 h-10 rounded-xl bg-bg flex items-center justify-center hover:bg-border">
-            <Bell className="w-5 h-5 text-text-secondary" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full" />
-          </button>
-          <button onClick={() => onNavigate('profile')} className="w-10 h-10 rounded-full bg-primary text-white font-bold text-sm flex items-center justify-center font-poppins">
-            A
-          </button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-bg font-inter p-4 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
 
-      <div className="max-w-5xl mx-auto px-4 lg:px-8 py-6 space-y-8">
-        {/* Hero CTA */}
-        <div className="bg-gradient-to-r from-primary to-primary-light rounded-3xl p-6 text-white relative overflow-hidden">
-          <div className="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full" />
-          <div className="absolute -right-2 top-8 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="relative">
-            <p className="text-white/80 text-sm mb-1 font-medium">You have surplus food?</p>
-            <h2 className="text-xl font-bold font-poppins mb-4">Post a donation in 60 seconds</h2>
-            <button
-              onClick={() => onNavigate('post-donation')}
-              className="flex items-center gap-2 bg-white text-primary font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-primary-50 shadow-md"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Post Food Now
-            </button>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-primary uppercase tracking-wide">Donor Portal</span>
+            <h1 className="text-2xl font-bold text-text-primary font-poppins">Overview</h1>
           </div>
+          <button onClick={() => onNavigate('post-donation')} className="flex items-center gap-2 bg-primary text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-md hover:bg-primary-dark transition-all">
+            <PlusCircle className="w-4 h-4" />
+            <span>Post Food Now</span>
+          </button>
         </div>
 
         {/* Stats */}
@@ -219,8 +199,8 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
                 return (
                   <div
                     key={d.id}
-                    className={`flex items-center gap-4 p-4 hover:bg-bg cursor-pointer ${i < donations.length - 1 ? 'border-b border-border' : ''}`}
-                    onClick={() => onNavigate('history')}
+                    className={`flex items-center gap-4 p-4 hover:bg-bg cursor-pointer hover:border-primary transition-all ${i < Math.min(donations.length, 5) - 1 ? 'border-b border-border' : ''}`}
+                    onClick={() => setSelectedDonation(d)}
                   >
                     <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-bg border border-border">
                       <img src={imgUrl} alt={d.title} className="w-full h-full object-cover" />
@@ -264,17 +244,16 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
               </div>
             ))}
           </div>
-          <div className="mt-4 bg-bg rounded-xl p-4 border border-border">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-text-secondary">Monthly goal: 500 kg saved</span>
-              <span className="text-xs font-bold text-primary">62%</span>
-            </div>
-            <div className="h-2 bg-border rounded-full overflow-hidden">
-              <div className="h-full bg-primary rounded-full" style={{ width: '62%' }} />
-            </div>
-          </div>
         </div>
+
       </div>
+
+      {/* Modal */}
+      <DonationDetailsModal
+        donation={selectedDonation}
+        onClose={() => setSelectedDonation(null)}
+        userRole="donor"
+      />
     </div>
   )
 }

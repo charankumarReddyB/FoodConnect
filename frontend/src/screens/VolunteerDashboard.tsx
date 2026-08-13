@@ -1,9 +1,10 @@
-import { Truck, MapPin, Bell, Clock, CheckCircle, Star, TrendingUp, ChevronRight, Navigation } from 'lucide-react'
+import { Truck, MapPin, Bell, Clock, CheckCircle, Star, ChevronRight } from 'lucide-react'
 import CheckInButton from '../components/CheckInButton'
 import { useState, useEffect } from 'react'
 import { donationApi, DonationItem, UserProfile } from '../services/api'
 import { firestore } from '../config/firebase'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import DonationDetailsModal from '../components/DonationDetailsModal'
 
 type Screen = string
 interface VolunteerDashboardProps {
@@ -20,6 +21,7 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
   })
 
   const [deliveries, setDeliveries] = useState<DonationItem[]>([])
+  const [selectedDonation, setSelectedDonation] = useState<DonationItem | null>(null)
 
   useEffect(() => {
     // Real-time Firestore stream for volunteer delivery items
@@ -39,69 +41,43 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
           estimatedServings: data.estimatedServings || data.servings || 20,
           preparedTime: data.preparedTime || new Date().toISOString(),
           expiryTime: data.expiryTime || data.pickupDeadline || new Date().toISOString(),
-          pickupAddress: data.pickupAddress || data.location || 'Central Pickup Point',
+          pickupAddress: data.pickupAddress || data.location || 'Local Address',
           deliveryMethod: data.deliveryMethod || 'VOLUNTEER_DELIVERY',
           status: data.status || 'AVAILABLE',
           imageUrls: data.imageUrls || [],
           createdAt: data.createdAt || new Date().toISOString(),
         })
       })
-      setDeliveries(list)
+      if (list.length > 0) setDeliveries(list)
     })
 
     return () => unsubscribe()
   }, [])
 
   const stats = [
-    { label: 'Deliveries Available', value: `${deliveries.length}`, icon: CheckCircle, color: 'bg-[#F3E5F5] text-[#6A1B9A]' },
-    { label: 'Active Tasks', value: `${deliveries.filter(d => d.status === 'REQUESTED' || d.status === 'ACCEPTED').length}`, icon: TrendingUp, color: 'bg-primary-50 text-primary' },
-    { label: 'Km Covered', value: '342', icon: Navigation, color: 'bg-[#E3F2FD] text-[#1565C0]' },
-    { label: 'Rating', value: '4.9★', icon: Star, color: 'bg-accent-50 text-accent' },
+    { label: 'Available Jobs', value: `${deliveries.length}`, sub: 'deliveries nearby', icon: Truck, color: 'bg-[#F3E5F5] text-[#6A1B9A]' },
+    { label: 'Completed Today', value: '3', sub: 'deliveries made', icon: CheckCircle, color: 'bg-primary-50 text-primary' },
+    { label: 'Hours Contributed', value: '4.5 hrs', sub: 'this week', icon: Clock, color: 'bg-accent-50 text-accent' },
+    { label: 'Volunteer Rating', value: '4.9 ★', sub: 'from 28 reviews', icon: Star, color: 'bg-[#FFF8E1] text-[#F57F17]' },
   ]
+
   return (
-    <div className="min-h-screen bg-bg font-inter">
-      {/* Top bar */}
-      <div className="bg-[#4A148C] px-6 py-5">
-        <div className="flex items-center justify-between mb-1">
+    <div className="min-h-screen bg-bg font-inter p-4 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Top bar */}
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-white/70 text-xs">Welcome back,</p>
-            <h1 className="text-lg font-bold text-white font-poppins">Priya Nair</h1>
+            <span className="text-xs font-semibold text-[#6A1B9A] uppercase tracking-wide">Volunteer Portal</span>
+            <h1 className="text-2xl font-bold text-text-primary font-poppins">Delivery Operations</h1>
           </div>
-          <div className="flex gap-2">
-            <button onClick={() => onNavigate('notifications')} className="relative w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
-              <Bell className="w-5 h-5 text-white" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full" />
-            </button>
-            <button onClick={() => onNavigate('profile')} className="w-10 h-10 rounded-full bg-white/20 text-white font-bold text-sm flex items-center justify-center font-poppins">
-              P
+          <div className="flex items-center gap-3">
+            <CheckInButton variant="header" />
+            <button onClick={() => onNavigate('notifications')} className="relative p-2 rounded-xl bg-surface border border-border shadow-sm">
+              <Bell className="w-5 h-5 text-text-secondary" />
             </button>
           </div>
         </div>
 
-        {/* Availability toggle & Check-in */}
-        <div className="grid sm:grid-cols-2 gap-3 mt-4">
-          <div className="flex items-center gap-3 bg-white/10 rounded-xl p-3">
-            <div className="flex-1">
-              <p className="text-white font-semibold text-sm">Available for Deliveries</p>
-              <p className="text-white/60 text-xs">Receiving nearby requests</p>
-            </div>
-            <div className="relative">
-              <div className="w-12 h-6 bg-success rounded-full flex items-center px-1 cursor-pointer">
-                <div className="w-4 h-4 bg-white rounded-full shadow ml-auto" />
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/10 rounded-xl p-3 flex items-center justify-between">
-            <div>
-              <p className="text-white font-semibold text-sm">Shift Check-in</p>
-              <p className="text-white/60 text-xs">Record attendance for today</p>
-            </div>
-            <CheckInButton variant="header" eventId="EVT-VOLUNTEER-SHIFT" location="MG Road Hub" />
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-5xl mx-auto px-4 lg:px-8 py-6 space-y-8">
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((s) => (
@@ -111,72 +87,36 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
               </div>
               <p className="text-2xl font-extrabold text-text-primary font-poppins">{s.value}</p>
               <p className="text-xs font-semibold text-text-primary mt-0.5">{s.label}</p>
+              <p className="text-xs text-text-secondary">{s.sub}</p>
             </div>
           ))}
         </div>
 
-        {/* Active delivery */}
-        <div className="bg-gradient-to-r from-[#4A148C] to-[#6A1B9A] rounded-3xl p-6 text-white relative overflow-hidden">
-          <div className="absolute -right-8 -top-8 w-36 h-36 bg-white/10 rounded-full" />
-          <div className="relative">
-            <div className="flex items-center gap-2 mb-3">
-              <Truck className="w-5 h-5" />
-              <span className="text-sm font-semibold opacity-80">Active Delivery</span>
-            </div>
-            <p className="text-lg font-bold font-poppins mb-1">{activeDelivery.food}</p>
-            <p className="text-white/70 text-sm mb-4">{activeDelivery.qty} · {activeDelivery.status}</p>
-            {/* Stepper */}
-            <div className="flex items-center gap-2 mb-4">
-              {['Pickup', 'En Route', 'Delivered'].map((step, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold border-2 ${
-                    i < activeDelivery.step ? 'bg-white border-white text-[#4A148C]'
-                    : i === activeDelivery.step ? 'border-white text-white'
-                    : 'border-white/30 text-white/30'
-                  }`}>
-                    {i < activeDelivery.step ? '✓' : i + 1}
-                  </div>
-                  <span className={`text-xs ${i <= activeDelivery.step ? 'text-white' : 'text-white/40'}`}>{step}</span>
-                  {i < 2 && <div className={`flex-1 h-0.5 w-4 rounded-full ${i < activeDelivery.step ? 'bg-white' : 'bg-white/20'}`} />}
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <div className="flex-1 bg-white/10 rounded-xl p-3">
-                <p className="text-[10px] opacity-70 mb-0.5">Pickup</p>
-                <p className="text-xs font-semibold">{activeDelivery.from}</p>
-              </div>
-              <div className="flex-1 bg-white/10 rounded-xl p-3">
-                <p className="text-[10px] opacity-70 mb-0.5">Deliver to</p>
-                <p className="text-xs font-semibold">{activeDelivery.to}</p>
-              </div>
-            </div>
-            <button className="mt-4 w-full bg-white text-[#4A148C] font-semibold py-2.5 rounded-xl text-sm shadow">
-              Mark as Delivered ✓
-            </button>
-          </div>
-        </div>
-
-        {/* Nearby deliveries */}
+        {/* Delivery tasks */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-bold text-text-primary font-poppins">Nearby Requests</h2>
+            <h2 className="text-lg font-bold text-text-primary font-poppins">Available Delivery Tasks</h2>
             <button onClick={() => onNavigate('nearby')} className="flex items-center gap-1 text-sm text-[#6A1B9A] font-semibold hover:underline">
               View map <ChevronRight className="w-4 h-4" />
             </button>
           </div>
-          <div className="space-y-4">
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {deliveries.length === 0 ? (
-              <div className="bg-surface rounded-2xl border border-border p-8 text-center text-text-secondary text-sm">
-                No active delivery requests right now. When donors post surplus food or recipients request food, new delivery tasks will appear here in real-time!
+              <div className="col-span-2 bg-surface rounded-2xl border border-border p-8 text-center text-text-secondary text-sm">
+                No active delivery tasks pending right now. New delivery tasks will appear here as recipients request food!
               </div>
             ) : (
               deliveries.map((d) => {
-                const imgUrl = d.imageUrls && d.imageUrls.length > 0 ? d.imageUrls[0] : 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=40&h=40&fit=crop&auto=format'
+                const imgUrl = d.imageUrls && d.imageUrls.length > 0 ? d.imageUrls[0] : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format'
                 return (
-                  <div key={d.id} className="bg-surface rounded-2xl border border-border p-5 shadow-sm">
-                    <div className="flex items-start gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 border border-border">
+                  <div
+                    key={d.id}
+                    onClick={() => setSelectedDonation(d)}
+                    className="bg-surface rounded-2xl border border-border p-5 shadow-sm hover:shadow-md cursor-pointer hover:border-primary transition-all"
+                  >
+                    <div className="flex items-start gap-3 mb-3">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden bg-bg border border-border flex-shrink-0">
                         <img src={imgUrl} alt="" className="w-full h-full object-cover" />
                       </div>
                       <div className="flex-1">
@@ -197,7 +137,10 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
                     </div>
                     <div className="flex gap-3">
                       <button
-                        onClick={() => alert(`Accepted delivery task for "${d.title}"! Contact donor at pickup location.`)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          alert(`Accepted delivery task for "${d.title}"! Contact donor at pickup location.`)
+                        }}
                         className="flex-1 bg-[#6A1B9A] text-white font-semibold py-2.5 rounded-xl text-sm shadow-sm hover:bg-[#4A148C]"
                       >
                         Accept Delivery Task
@@ -232,6 +175,13 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
           </div>
         </div>
       </div>
+
+      {/* Details Modal */}
+      <DonationDetailsModal
+        donation={selectedDonation}
+        onClose={() => setSelectedDonation(null)}
+        userRole="volunteer"
+      />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { donationApi, DonationItem, UserProfile } from '../services/api'
 import { firestore } from '../config/firebase'
 import { collection, onSnapshot } from 'firebase/firestore'
+import DonationDetailsModal from '../components/DonationDetailsModal'
 
 type Role = 'donor' | 'recipient' | 'volunteer' | 'admin'
 interface HistoryProps {
@@ -23,7 +24,7 @@ const statusConfig: Record<string, { label: string; bg: string; text: string; ic
   CANCELLED: { label: 'Cancelled', bg: 'bg-[#FFEBEE]', text: 'text-error', icon: XCircle },
 }
 
-export default function History({ onBack }: HistoryProps) {
+export default function History({ onBack, role }: HistoryProps) {
   const [user] = useState<UserProfile | null>(() => {
     const raw = localStorage.getItem('foodconnect_user')
     if (raw) {
@@ -35,6 +36,7 @@ export default function History({ onBack }: HistoryProps) {
   const [donations, setDonations] = useState<DonationItem[]>([])
   const [filter, setFilter] = useState<'all' | 'delivered' | 'pending' | 'cancelled'>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedDonation, setSelectedDonation] = useState<DonationItem | null>(null)
 
   useEffect(() => {
     // 1. REST API load
@@ -169,7 +171,11 @@ export default function History({ onBack }: HistoryProps) {
             const sc = statusConfig[d.status] || statusConfig.AVAILABLE
             const imgUrl = d.imageUrls && d.imageUrls.length > 0 ? d.imageUrls[0] : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format'
             return (
-              <div key={d.id} className="bg-surface rounded-2xl border border-border p-4 flex items-center gap-4 shadow-sm hover:shadow-md cursor-pointer">
+              <div
+                key={d.id}
+                onClick={() => setSelectedDonation(d)}
+                className="bg-surface rounded-2xl border border-border p-4 flex items-center gap-4 shadow-sm hover:shadow-md cursor-pointer hover:border-primary transition-all"
+              >
                 <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 border border-border">
                   <img src={imgUrl} alt={d.title} className="w-full h-full object-cover" />
                 </div>
@@ -190,6 +196,13 @@ export default function History({ onBack }: HistoryProps) {
           })
         )}
       </div>
+
+      {/* Details Modal */}
+      <DonationDetailsModal
+        donation={selectedDonation}
+        onClose={() => setSelectedDonation(null)}
+        userRole={role}
+      />
     </div>
   )
 }

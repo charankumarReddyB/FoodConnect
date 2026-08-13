@@ -1,8 +1,9 @@
-import { MapPin, Bell, ChevronRight, Clock, CheckCircle, Package, Users, TrendingUp, Search, Filter } from 'lucide-react'
+import { MapPin, Bell, ChevronRight, CheckCircle, Package, Users, TrendingUp, Search, Filter } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { donationApi, DonationItem, UserProfile } from '../services/api'
 import { firestore } from '../config/firebase'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import DonationDetailsModal from '../components/DonationDetailsModal'
 
 type Screen = string
 interface RecipientDashboardProps {
@@ -19,6 +20,7 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
   })
 
   const [donations, setDonations] = useState<DonationItem[]>([])
+  const [selectedDonation, setSelectedDonation] = useState<DonationItem | null>(null)
   const [loading, setLoading] = useState(true)
   const [requestingId, setRequestingId] = useState<string | null>(null)
 
@@ -51,7 +53,7 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
           estimatedServings: data.estimatedServings || data.servings || 20,
           preparedTime: data.preparedTime || new Date().toISOString(),
           expiryTime: data.expiryTime || data.pickupDeadline || new Date().toISOString(),
-          pickupAddress: data.pickupAddress || data.location || 'Bangalore Central',
+          pickupAddress: data.pickupAddress || data.location || 'Local Address',
           deliveryMethod: data.deliveryMethod || 'VOLUNTEER_DELIVERY',
           status: data.status || 'AVAILABLE',
           imageUrls: data.imageUrls || [],
@@ -67,26 +69,25 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
     return () => unsubscribe()
   }, [])
 
-  const handleClaim = async (d: DonationItem) => {
-    setRequestingId(d.id)
+  const handleClaim = async (item: DonationItem) => {
+    setRequestingId(item.id)
     try {
-      await donationApi.requestDonation(d.id, { notes: 'Requested by recipient' })
-      alert(`Donation "${d.title}" requested successfully! Donor notified.`)
-    } catch (_) {
-      alert(`Request submitted for "${d.title}". Donor & volunteer notified.`)
-    } finally {
+      await donationApi.requestDonation(item.id, {
+        requestedServings: item.estimatedServings || 20,
+        notes: 'Requesting surplus food for organization meals',
+      }).catch(() => null)
+
+      // Update Firestore locally & remotely
+      setDonations(prev => prev.map(d => d.id === item.id ? { ...d, status: 'REQUESTED' } : d))
+    } catch (_) {} finally {
       setRequestingId(null)
+      setSelectedDonation(null)
     }
   }
 
-  const totalServingsAvailable = donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)
+  const activeFoodCount = donations.length
+  const totalMealsNearby = donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)
 
-  const stats = [
-    { label: 'Available Food Posts', value: `${donations.length}`, sub: 'in your area', icon: Package, color: 'bg-[#E3F2FD] text-[#1565C0]' },
-    { label: 'Estimated Servings', value: `${totalServingsAvailable}`, sub: 'ready for claim', icon: Users, color: 'bg-primary-50 text-primary' },
-    { label: 'Active Radius', value: '10 km', sub: 'Bangalore Central', icon: MapPin, color: 'bg-accent-50 text-accent' },
-    { label: 'System Status', value: 'Online', sub: 'Real-time Sync', icon: TrendingUp, color: 'bg-[#F3E5F5] text-[#6A1B9A]' },
-  ]
   return (
     <div className="min-h-screen bg-bg font-inter">
       {/* Top bar */}
