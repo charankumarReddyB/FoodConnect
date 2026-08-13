@@ -41,6 +41,29 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
     : 'donor'
   const cfg = roleConfig[normalizedRole] || roleConfig.donor
 
+  const formatErrorMessage = (err: any): string => {
+    const msg = (err?.message || err?.code || String(err)).toLowerCase()
+    if (msg.includes('database is closing') || msg.includes('indexeddb') || msg.includes('hidden')) {
+      return 'Connection temporarily interrupted. Please click Sign In again.'
+    }
+    if (msg.includes('popup-closed-by-user') || msg.includes('cancelled-popup')) {
+      return 'Google Sign-In window was closed. Please select your account to complete login.'
+    }
+    if (msg.includes('popup-blocked')) {
+      return 'Google Sign-In window was blocked by browser. Please allow popups or sign in with Email.'
+    }
+    if (msg.includes('network-request-failed')) {
+      return 'Network connection error. Please check your internet connection and try again.'
+    }
+    if (msg.includes('user-not-found') || msg.includes('wrong-password') || msg.includes('invalid-credential')) {
+      return 'Invalid email or password. Please check your details and try again.'
+    }
+    if (msg.includes('email-already-in-use')) {
+      return 'An account with this email already exists. Please sign in.'
+    }
+    return err?.message || 'Authentication failed. Please try again.'
+  }
+
   const handleGoogleAuth = async () => {
     setLoading(true)
     setErrorMsg(null)
@@ -62,7 +85,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
         onSuccess()
       }, 500)
     } catch (err: any) {
-      setErrorMsg(err.message || 'Google Authentication failed')
+      setErrorMsg(formatErrorMessage(err))
     } finally {
       setLoading(false)
     }
@@ -76,7 +99,6 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
     setLoading(true)
     setErrorMsg(null)
     setSuccessMsg(null)
-
     try {
       if (cfg.backendRole === 'ADMIN') {
         await authApi.adminLogin({ email: email.trim(), password })
@@ -101,7 +123,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
         onSuccess()
       }, 500)
     } catch (err: any) {
-      setErrorMsg(err.message || 'Authentication failed')
+      setErrorMsg(formatErrorMessage(err))
     } finally {
       setLoading(false)
     }
