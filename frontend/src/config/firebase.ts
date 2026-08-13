@@ -6,6 +6,7 @@ import {
   signInWithPhoneNumber,
   signInWithPopup,
   signOut,
+  onAuthStateChanged,
   ConfirmationResult
 } from 'firebase/auth'
 import {
@@ -38,6 +39,33 @@ export const googleProvider = new GoogleAuthProvider()
 
 googleProvider.setCustomParameters({
   prompt: 'select_account'
+})
+
+// Automatically write/update user document to Cloud Firestore 'users' collection on any login
+onAuthStateChanged(firebaseAuth, async (authUser) => {
+  if (authUser) {
+    try {
+      const userRef = doc(firestore, 'users', authUser.uid)
+      await setDoc(
+        userRef,
+        {
+          id: authUser.uid,
+          uid: authUser.uid,
+          fullName: authUser.displayName || authUser.email?.split('@')[0] || 'FoodConnect User',
+          email: authUser.email || '',
+          phone: authUser.phoneNumber || '',
+          photoUrl: authUser.photoURL || '',
+          providerId: authUser.providerData[0]?.providerId || 'password',
+          lastLoginAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true }
+      )
+      console.log(`[Firebase Auth] Automatically synced user ${authUser.uid} (${authUser.email}) to Cloud Firestore 'users' collection.`)
+    } catch (err) {
+      console.warn('[Firebase Auth] Failed to auto-sync user document to Cloud Firestore:', err)
+    }
+  }
 })
 
 // Helper to set up invisible Recaptcha for phone auth

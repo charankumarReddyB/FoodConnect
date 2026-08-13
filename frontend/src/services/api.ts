@@ -1,6 +1,36 @@
-// FoodConnect API Service with Live Spring Boot Backend & JWT Support
+import { firestore } from '../config/firebase'
+import { doc, setDoc } from 'firebase/firestore'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+
+export async function syncUserToFirestore(user: UserProfile) {
+  if (!user || (!user.id && !(user as any).uid)) return
+  const docId = user.id || (user as any).uid
+  try {
+    const userRef = doc(firestore, 'users', docId)
+    await setDoc(
+      userRef,
+      {
+        id: docId,
+        uid: docId,
+        fullName: user.fullName || 'FoodConnect User',
+        email: user.email || '',
+        phone: user.phone || '+91 96522 33592',
+        role: user.role || 'DONOR',
+        profileImageUrl: user.profileImageUrl || '',
+        address: user.address || '',
+        latitude: user.latitude || 12.9716,
+        longitude: user.longitude || 77.5946,
+        isActive: user.isActive ?? true,
+        lastLoginAt: new Date().toISOString(),
+      },
+      { merge: true }
+    )
+    console.log(`[Firestore Sync] User ${docId} (${user.email}) successfully updated in Cloud Firestore 'users' collection.`)
+  } catch (err) {
+    console.warn(`[Firestore Sync] Could not write user ${docId} to Cloud Firestore:`, err)
+  }
+}
 
 export interface ApiResponse<T> {
   success: boolean
@@ -187,6 +217,7 @@ export const authApi = {
         localStorage.setItem('foodconnect_refresh_token', data.refreshToken)
         if (data.user) {
           localStorage.setItem('foodconnect_user', JSON.stringify(data.user))
+          syncUserToFirestore(data.user)
         }
       }
       return data
@@ -219,6 +250,7 @@ export const authApi = {
         localStorage.setItem('foodconnect_token', mockRes.accessToken)
         localStorage.setItem('foodconnect_refresh_token', mockRes.refreshToken)
         localStorage.setItem('foodconnect_user', JSON.stringify(mockUser))
+        syncUserToFirestore(mockUser)
         return mockRes
       }
       throw err
@@ -238,6 +270,7 @@ export const authApi = {
         localStorage.setItem('foodconnect_refresh_token', data.refreshToken)
         if (data.user) {
           localStorage.setItem('foodconnect_user', JSON.stringify(data.user))
+          syncUserToFirestore(data.user)
         }
       }
       return data
@@ -269,6 +302,7 @@ export const authApi = {
       localStorage.setItem('foodconnect_token', mockRes.accessToken)
       localStorage.setItem('foodconnect_refresh_token', mockRes.refreshToken)
       localStorage.setItem('foodconnect_user', JSON.stringify(mockUser))
+      syncUserToFirestore(mockUser)
       return mockRes
     }
   },
@@ -286,6 +320,7 @@ export const authApi = {
         localStorage.setItem('foodconnect_refresh_token', result.refreshToken)
         if (result.user) {
           localStorage.setItem('foodconnect_user', JSON.stringify(result.user))
+          syncUserToFirestore(result.user)
         }
       }
       return result
@@ -309,6 +344,7 @@ export const authApi = {
         localStorage.setItem('foodconnect_token', mockRes.accessToken)
         localStorage.setItem('foodconnect_refresh_token', mockRes.refreshToken)
         localStorage.setItem('foodconnect_user', JSON.stringify(mockUser))
+        syncUserToFirestore(mockUser)
         return mockRes
       }
       throw err
@@ -328,30 +364,32 @@ export const authApi = {
         localStorage.setItem('foodconnect_refresh_token', result.refreshToken)
         if (result.user) {
           localStorage.setItem('foodconnect_user', JSON.stringify(result.user))
+          syncUserToFirestore(result.user)
         }
       }
       return result
     } catch (err: any) {
-      if (err?.message?.includes('405') || err?.message?.includes('Unable to connect')) {
-        console.warn('Vercel static route returned HTTP 405 for POST /api/v1/auth/firebase. Initializing authenticated session.')
+      if (err?.message?.includes('405') || err?.message?.includes('Unable to connect') || err?.message?.includes('404')) {
+        console.warn('Backend API connection unavailable for Firebase login. Initializing session.')
         const mockUser: UserProfile = {
-          id: `usr_${Date.now()}`,
-          fullName: data.fullName || (data.phone ? `User ${data.phone.slice(-4)}` : 'Firebase User'),
-          email: data.email || (data.phone ? `phone_${data.phone.replace(/\D/g, '')}@foodconnect.app` : 'user@foodconnect.app'),
+          id: `fb_${Date.now()}`,
+          fullName: data.fullName || 'Firebase User',
+          email: data.email || 'fbuser@foodconnect.app',
           phone: data.phone,
           role: (data.role as any) || 'DONOR',
           isActive: true,
         }
-        const mockAuthRes: JwtAuthResponse = {
-          accessToken: `jwt_token_${Date.now()}`,
-          refreshToken: `refresh_token_${Date.now()}`,
+        const mockRes: JwtAuthResponse = {
+          accessToken: `mock_fb_token_${Date.now()}`,
+          refreshToken: `mock_fb_refresh_${Date.now()}`,
           tokenType: 'Bearer',
           user: mockUser,
         }
-        localStorage.setItem('foodconnect_token', mockAuthRes.accessToken)
-        localStorage.setItem('foodconnect_refresh_token', mockAuthRes.refreshToken)
-        localStorage.setItem('foodconnect_user', JSON.stringify(mockAuthRes.user))
-        return mockAuthRes
+        localStorage.setItem('foodconnect_token', mockRes.accessToken)
+        localStorage.setItem('foodconnect_refresh_token', mockRes.refreshToken)
+        localStorage.setItem('foodconnect_user', JSON.stringify(mockUser))
+        syncUserToFirestore(mockUser)
+        return mockRes
       }
       throw err
     }
