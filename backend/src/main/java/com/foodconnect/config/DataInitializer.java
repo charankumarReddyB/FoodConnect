@@ -43,7 +43,7 @@ public class DataInitializer implements CommandLineRunner {
             User adminLegacy = User.builder()
                     .fullName("FoodConnect Admin India")
                     .email("admin@foodconnect.in")
-                    .phone("+919876543210")
+                    .phone("+919876543211")
                     .passwordHash(passwordEncoder.encode("Admin@123"))
                     .role(UserRole.ADMIN)
                     .address("100 Feet Road, Indiranagar, Bengaluru, Karnataka 560038")
