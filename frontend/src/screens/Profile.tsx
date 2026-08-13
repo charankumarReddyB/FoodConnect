@@ -133,8 +133,8 @@ export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
     onNavigate('landing')
   }
 
-  const displayName = user?.fullName || (role === 'admin' ? 'System Administrator' : 'FoodConnect User')
-  const displayEmail = user?.email || (role === 'admin' ? 'admin@foodconnect.in' : 'user@foodconnect.org')
+  const displayName = user?.fullName || (role === 'admin' ? 'Charan Kumar Reddy (Admin)' : 'FoodConnect User')
+  const displayEmail = user?.email || (role === 'admin' ? 'charankumarreddybantrothula@gmail.com' : 'user@foodconnect.org')
   const displayPhone = user?.phone || '+91 98765 43210'
   const displayAddress = user?.address || 'Bangalore, Karnataka, India'
   const initial = displayName.charAt(0).toUpperCase()

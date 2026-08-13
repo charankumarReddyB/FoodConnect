@@ -57,6 +57,8 @@
    - Normal users sign in using **Google OAuth 2.0 Sign-In**, **Mobile Phone SMS OTP**, or **Email & Password**.
 2. **Dedicated Administrator Authentication (`ADMIN`)**:
    - Administrators log in via the dedicated endpoint `/api/v1/auth/admin/login` using **Email & Password ONLY**.
+   - **Admin Email**: `charankumarreddybantrothula@gmail.com`
+   - **Admin Password**: `charan@123`
    - **Google Sign-In is strictly disabled** for Admin accounts to prevent unauthorized access.
    - Self-assignment of the `ADMIN` role via public registration is prohibited.
 
