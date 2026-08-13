@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { donationApi, DonationItem, UserProfile } from '../services/api'
 import { firestore } from '../config/firebase'
 import { collection, onSnapshot, query, where } from 'firebase/firestore'
+import { notifyPartiesOnAction } from '../services/notificationService'
 import DonationDetailsModal from '../components/DonationDetailsModal'
 
 type Screen = string
@@ -86,6 +87,15 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
 
       // Update Firestore locally & remotely
       setDonations(prev => prev.map(d => d.id === item.id ? { ...d, status: 'REQUESTED' } : d))
+
+      // Dispatch notifications to Donor, Recipient, and Volunteer
+      notifyPartiesOnAction({
+        action: 'REQUESTED',
+        foodTitle: item.title,
+        donorName: item.donorName,
+        recipientName: user?.fullName || 'Recipient NGO',
+        donationId: item.id,
+      })
     } catch (_) {} finally {
       setRequestingId(null)
       setSelectedDonation(null)

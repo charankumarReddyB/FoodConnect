@@ -3,6 +3,7 @@ import { ArrowLeft, Camera, MapPin, Clock, Users, Leaf, Package, ChevronDown, Ch
 import { donationApi, UserProfile } from '../services/api'
 import { firestore } from '../config/firebase'
 import { doc, setDoc } from 'firebase/firestore'
+import { notifyPartiesOnAction } from '../services/notificationService'
 
 interface PostDonationProps {
   onBack: () => void
@@ -158,6 +159,14 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
     // 3. Asynchronously inform Spring Boot REST API
     donationApi.createDonation(payload).catch((apiErr) => {
       console.log('REST API background post status:', apiErr)
+    })
+
+    // 4. Dispatch real-time notifications to Donor, Recipients & Volunteers
+    notifyPartiesOnAction({
+      action: 'POSTED',
+      foodTitle: title,
+      donorName: user?.fullName || 'Food Donor',
+      donationId,
     })
 
     setSubmitted(true)

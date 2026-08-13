@@ -5,6 +5,7 @@ import { donationApi, deliveryApi, DonationItem, UserProfile } from '../services
 import { firestore } from '../config/firebase'
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore'
 import DonationDetailsModal from '../components/DonationDetailsModal'
+import { notifyPartiesOnAction } from '../services/notificationService'
 
 type Screen = string
 interface VolunteerDashboardProps {
@@ -24,6 +25,13 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
   const [deliveries, setDeliveries] = useState<DonationItem[]>([])
   const [acceptedIds, setAcceptedIds] = useState<string[]>(() => {
     const raw = localStorage.getItem('foodconnect_accepted_deliveries')
+    if (raw) {
+      try { return JSON.parse(raw) } catch (_) {}
+    }
+    return []
+  })
+  const [completedIds, setCompletedIds] = useState<string[]>(() => {
+    const raw = localStorage.getItem('foodconnect_completed_deliveries')
     if (raw) {
       try { return JSON.parse(raw) } catch (_) {}
     }
@@ -81,15 +89,15 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
 
   // Filter tasks based on tabs and current volunteer
   const availableTasks = deliveries.filter(
-    (d) => !acceptedIds.includes(d.id) && d.status !== 'DELIVERED' && d.status !== 'COMPLETED'
+    (d) => !acceptedIds.includes(d.id) && !completedIds.includes(d.id) && d.status !== 'DELIVERED' && d.status !== 'COMPLETED'
   )
 
   const activeDeliveries = deliveries.filter(
-    (d) => acceptedIds.includes(d.id) && d.status !== 'DELIVERED' && d.status !== 'COMPLETED'
+    (d) => acceptedIds.includes(d.id) && !completedIds.includes(d.id) && d.status !== 'DELIVERED' && d.status !== 'COMPLETED'
   )
 
   const completedDeliveries = deliveries.filter(
-    (d) => acceptedIds.includes(d.id) && (d.status === 'DELIVERED' || d.status === 'COMPLETED')
+    (d) => completedIds.includes(d.id) || d.status === 'DELIVERED' || d.status === 'COMPLETED'
   )
 
   const handleAcceptTask = async (item: DonationItem) => {
@@ -114,6 +122,16 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
       // Backend API call fallback
       deliveryApi.claimDelivery(item.id, user?.id)
 
+      // Notify Donor, Recipient, and Volunteer
+      notifyPartiesOnAction({
+        action: 'ACCEPTED',
+        foodTitle: item.title,
+        donorName: item.donorName,
+        recipientName: item.recipientName,
+        volunteerName: user?.fullName || 'FoodConnect Volunteer',
+        donationId: item.id,
+      })
+
       setActionSuccessMsg(`Successfully accepted delivery task for "${item.title}"! Moved to Active Deliveries.`)
       setActiveTab('active')
       setTimeout(() => setActionSuccessMsg(null), 4000)
@@ -129,6 +147,13 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
         prev.map((d) => (d.id === item.id ? { ...d, status: newStatus } : d))
       )
 
+      // If status is DELIVERED, record to completedIds and switch tab to 'completed'
+      if (newStatus === 'DELIVERED') {
+        const nextCompleted = [...new Set([...completedIds, item.id])]
+        setCompletedIds(nextCompleted)
+        localStorage.setItem('foodconnect_completed_deliveries', JSON.stringify(nextCompleted))
+      }
+
       // Update Firestore document
       try {
         const docRef = doc(firestore, 'donations', item.id)
@@ -142,10 +167,21 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
 
       deliveryApi.updateStatus(item.id, newStatus)
 
+      // Dispatch notifications to Donor, Recipient, and Volunteer
+      notifyPartiesOnAction({
+        action: newStatus === 'PICKED_UP' ? 'PICKED_UP' : 'DELIVERED',
+        foodTitle: item.title,
+        donorName: item.donorName,
+        recipientName: item.recipientName,
+        volunteerName: user?.fullName || 'FoodConnect Volunteer',
+        donationId: item.id,
+      })
+
       if (newStatus === 'PICKED_UP') {
         setActionSuccessMsg(`Picked up food from donor for "${item.title}". Now proceed to recipient location.`)
       } else {
-        setActionSuccessMsg(`🎉 Delivery completed for "${item.title}"! Thank you for serving your community.`)
+        setActionSuccessMsg(`🎉 Delivery completed for "${item.title}"! Moved to Completed tab. Thank you for serving your community.`)
+        setActiveTab('completed')
       }
       setTimeout(() => setActionSuccessMsg(null), 4000)
     } catch (_) {}
