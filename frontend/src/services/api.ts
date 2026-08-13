@@ -74,6 +74,10 @@ export interface DonationItem {
   id: string
   donorId: string
   donorName: string
+  donorPhone?: string
+  recipientId?: string
+  recipientName?: string
+  recipientPhone?: string
   title: string
   description?: string
   foodType: 'VEG' | 'NON_VEG' | 'EGG' | 'VEGAN'
@@ -84,9 +88,13 @@ export interface DonationItem {
   pickupAddress: string
   pickupLatitude?: number
   pickupLongitude?: number
+  deliveryAddress?: string
+  deliveryLatitude?: number
+  deliveryLongitude?: number
   latitude?: number
   longitude?: number
   distanceKm?: number
+  assignedVolunteerId?: string
   deliveryMethod: 'SELF_PICKUP' | 'DONOR_DELIVERY' | 'VOLUNTEER_DELIVERY'
   status: 'AVAILABLE' | 'CREATED' | 'REQUESTED' | 'ACCEPTED' | 'ASSIGNED' | 'PICKED_UP' | 'IN_TRANSIT' | 'DELIVERED' | 'COMPLETED' | 'EXPIRED' | 'CANCELLED'
   imageUrls?: string[]
@@ -523,5 +531,24 @@ export const checkInApi = {
       headers: getAuthHeaders(),
     })
     return safeJsonResponse<CheckInResponse>(response, 'Failed to undo check-in')
+  },
+}
+
+// Delivery API
+export const deliveryApi = {
+  async claimDelivery(donationId: string, volunteerId?: string): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/deliveries/claim?donationId=${donationId}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    }).catch(() => null)
+    return response
+  },
+
+  async updateStatus(deliveryId: string, status: 'PICKED_UP' | 'DELIVERED' | 'COMPLETED'): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/deliveries/${deliveryId}/status?status=${status}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+    }).catch(() => null)
+    return response
   },
 }
