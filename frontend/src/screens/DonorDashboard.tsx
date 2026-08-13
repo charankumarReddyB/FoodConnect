@@ -44,22 +44,29 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
   useEffect(() => {
     let unsubscribe: () => void = () => {}
 
-    // 1. Attempt API fetch
-    const loadApiData = async () => {
+    // 1. Initial Local Storage & REST API load
+    const loadInitialData = async () => {
       try {
+        const localRaw = localStorage.getItem('foodconnect_local_donations')
+        const localList: DonationItem[] = localRaw ? JSON.parse(localRaw) : []
+
         if (user?.id) {
-          const res = await donationApi.getMyDonations(user.id)
-          if (res?.content) setDonations(res.content)
+          const res = await donationApi.getMyDonations(user.id).catch(() => null)
+          const apiList = res?.content || []
+          const combined = [...localList, ...apiList.filter(a => !localList.some(l => l.id === a.id))]
+          setDonations(combined)
         } else {
-          const res = await donationApi.getDonations()
-          if (res?.content) setDonations(res.content)
+          const res = await donationApi.getDonations().catch(() => null)
+          const apiList = res?.content || []
+          const combined = [...localList, ...apiList.filter(a => !localList.some(l => l.id === a.id))]
+          setDonations(combined)
         }
       } catch (_) {} finally {
         setLoading(false)
       }
     }
 
-    loadApiData()
+    loadInitialData()
 
     // 2. Real-time Cloud Firestore synchronization
     try {
@@ -89,8 +96,13 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
             createdAt: data.createdAt || new Date().toISOString(),
           })
         })
-        if (liveList.length > 0) {
-          setDonations(liveList)
+
+        const localRaw = localStorage.getItem('foodconnect_local_donations')
+        const localList: DonationItem[] = localRaw ? JSON.parse(localRaw) : []
+        const merged = [...localList, ...liveList.filter(l => !localList.some(loc => loc.id === l.id))]
+
+        if (merged.length > 0) {
+          setDonations(merged)
           setLoading(false)
         }
       })

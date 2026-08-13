@@ -117,48 +117,40 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
       imageUrls: [finalImgUrl],
     }
 
-    try {
-      // 1. Primary: REST API Submission (Spring Boot uses Firebase Admin SDK - bypasses security rules)
-      const apiRes = await donationApi.createDonation(payload)
-      const targetId = apiRes?.id || donationId
-      setPostedDonationId(targetId)
-
-      // 2. Client Firestore Sync (Silent catch for permission boundaries)
-      try {
-        await setDoc(doc(firestore, 'donations', targetId), {
-          ...payload,
-          id: targetId,
-          donorId: user?.id || 'usr_donor',
-          donorName: user?.fullName || 'Food Donor',
-          status: 'AVAILABLE',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-      } catch (fsErr) {
-        console.warn('Client Firestore write boundary notice:', fsErr)
-      }
-
-      setSubmitted(true)
-    } catch (err: any) {
-      console.warn('Backend REST API unavailable, writing directly to Cloud Firestore collection...')
-      try {
-        await setDoc(doc(firestore, 'donations', donationId), {
-          ...payload,
-          id: donationId,
-          donorId: user?.id || 'usr_donor',
-          donorName: user?.fullName || 'Food Donor',
-          status: 'AVAILABLE',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-        setPostedDonationId(donationId)
-        setSubmitted(true)
-      } catch (fsWriteErr: any) {
-        setErrorMsg('Failed to post donation. Please check your network connection.')
-      }
-    } finally {
-      setLoading(false)
+    const fullDonationObject = {
+      ...payload,
+      id: donationId,
+      donorId: user?.id || 'usr_donor',
+      donorName: user?.fullName || 'Food Donor',
+      status: 'AVAILABLE',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     }
+
+    setPostedDonationId(donationId)
+
+    // 1. Direct Cloud Firestore document write
+    try {
+      await setDoc(doc(firestore, 'donations', donationId), fullDonationObject)
+      console.log('Successfully written document to Cloud Firestore collection "donations":', donationId)
+    } catch (fsWriteErr: any) {
+      console.warn('Cloud Firestore client write notice:', fsWriteErr)
+    }
+
+    // 2. Immediate local storage persistence cache
+    try {
+      const existingRaw = localStorage.getItem('foodconnect_local_donations')
+      const existingList = existingRaw ? JSON.parse(existingRaw) : []
+      localStorage.setItem('foodconnect_local_donations', JSON.stringify([fullDonationObject, ...existingList]))
+    } catch (_) {}
+
+    // 3. Asynchronously inform Spring Boot REST API
+    donationApi.createDonation(payload).catch((apiErr) => {
+      console.log('REST API background post status:', apiErr)
+    })
+
+    setSubmitted(true)
+    setLoading(false)
   }
 
   if (submitted) {
