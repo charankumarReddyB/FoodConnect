@@ -46,6 +46,17 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
   const [submitted, setSubmitted] = useState(false)
   const [postedDonationId, setPostedDonationId] = useState<string>('')
 
+  const useSavedProfileLocation = () => {
+    if (user?.address) {
+      setPickupAddress(user.address)
+      if (user.latitude) setLatitude(user.latitude)
+      if (user.longitude) setLongitude(user.longitude)
+      setGpsStatus(`Loaded Saved Donor Profile Location (${user.latitude ? user.latitude.toFixed(4) : '12.9716'}, ${user.longitude ? user.longitude.toFixed(4) : '77.5946'})`)
+    } else {
+      setGpsStatus('No saved profile location found. Please use Live GPS or enter address manually.')
+    }
+  }
+
   const fetchLiveLocation = () => {
     if (!navigator.geolocation) {
       setErrorMsg('Geolocation is not supported by your browser')
@@ -336,17 +347,27 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
 
         {/* Time & pickup */}
         <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-text-primary font-poppins">Pickup Details</h2>
-            <button
-              type="button"
-              disabled={isLocating}
-              onClick={fetchLiveLocation}
-              className="flex items-center gap-1.5 bg-primary-50 hover:bg-primary-100 text-primary text-xs font-semibold px-3 py-1.5 rounded-xl border border-primary-200 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>{isLocating ? 'Acquiring GPS...' : '📍 Use Live GPS Location'}</span>
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-text-primary font-poppins">Pickup Location</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={useSavedProfileLocation}
+                className="flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold px-3 py-1.5 rounded-xl border border-emerald-200 transition-all cursor-pointer"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>Use Saved Profile Location</span>
+              </button>
+              <button
+                type="button"
+                disabled={isLocating}
+                onClick={fetchLiveLocation}
+                className="flex items-center gap-1 bg-primary-50 hover:bg-primary-100 text-primary text-xs font-semibold px-3 py-1.5 rounded-xl border border-primary-200 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                <span>{isLocating ? 'Acquiring GPS...' : '📍 Live GPS'}</span>
+              </button>
+            </div>
           </div>
 
           {gpsStatus && (

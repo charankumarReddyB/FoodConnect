@@ -119,8 +119,13 @@ public class FirestoreDonationRepository {
         map.put("status", donation.getStatus() != null ? donation.getStatus().name() : DonationStatus.CREATED.name());
         map.put("deliveryMethod", donation.getDeliveryMethod() != null ? donation.getDeliveryMethod().name() : DeliveryMethod.VOLUNTEER_DELIVERY.name());
         map.put("pickupAddress", donation.getPickupAddress());
+        map.put("pickupLatitude", donation.getLatitude());
+        map.put("pickupLongitude", donation.getLongitude());
         map.put("latitude", donation.getLatitude());
         map.put("longitude", donation.getLongitude());
+        if (donation.getLatitude() != null && donation.getLongitude() != null) {
+            map.put("pickupLocation", new GeoPoint(donation.getLatitude(), donation.getLongitude()));
+        }
         if (donation.getImages() != null && !donation.getImages().isEmpty()) {
             List<String> urls = new ArrayList<>();
             for (com.foodconnect.entity.FoodImage img : donation.getImages()) {

@@ -127,6 +127,9 @@ public class FirestoreUserRepository {
         map.put("address", user.getAddress());
         map.put("latitude", user.getLatitude());
         map.put("longitude", user.getLongitude());
+        if (user.getLatitude() != null && user.getLongitude() != null) {
+            map.put("location", new GeoPoint(user.getLatitude(), user.getLongitude()));
+        }
         map.put("isActive", user.getIsActive() != null ? user.getIsActive() : true);
         map.put("emailVerified", user.getEmailVerified() != null ? user.getEmailVerified() : false);
         map.put("phoneVerified", user.getPhoneVerified() != null ? user.getPhoneVerified() : false);

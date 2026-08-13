@@ -112,6 +112,7 @@ export default function Nearby({ onBack }: NearbyProps) {
   const [selected, setSelected] = useState<string | null>('F-201')
   const [showFilters, setShowFilters] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [radiusKm, setRadiusKm] = useState<number>(10)
 
   const filtered = foodItems.filter((f) => {
     const matchesFilter = filter === 'all' || (filter === 'veg' && f.type === 'Veg') || (filter === 'nonveg' && f.type === 'Non-Veg')
@@ -149,20 +150,37 @@ export default function Nearby({ onBack }: NearbyProps) {
         </button>
       </div>
 
-      {/* Filter Chips */}
+      {/* Filter Chips & Radius Selector */}
       {showFilters && (
-        <div className="bg-surface border-b border-border px-4 py-2.5 flex items-center gap-2 flex-shrink-0 z-20">
-          {(['all', 'veg', 'nonveg'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium border capitalize transition-colors ${
-                filter === f ? 'bg-primary text-white border-primary' : 'bg-bg text-text-secondary border-border hover:bg-border/50'
-              }`}
-            >
-              {f === 'all' ? 'All Food' : f === 'veg' ? 'Veg Only 🟢' : 'Non-Veg 🔴'}
-            </button>
-          ))}
+        <div className="bg-surface border-b border-border px-4 py-2.5 flex items-center justify-between gap-2 flex-shrink-0 z-20 flex-wrap">
+          <div className="flex items-center gap-2">
+            {(['all', 'veg', 'nonveg'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium border capitalize transition-colors ${
+                  filter === f ? 'bg-primary text-white border-primary' : 'bg-bg text-text-secondary border-border hover:bg-border/50'
+                }`}
+              >
+                {f === 'all' ? 'All Food' : f === 'veg' ? 'Veg Only 🟢' : 'Non-Veg 🔴'}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1 bg-bg border border-border px-2 py-1 rounded-xl">
+            <span className="text-[11px] font-bold text-text-secondary uppercase mr-1">Radius:</span>
+            {[5, 10, 25, 50].map((r) => (
+              <button
+                key={r}
+                onClick={() => setRadiusKm(r)}
+                className={`px-2 py-0.5 rounded-md text-xs font-bold transition-all ${
+                  radiusKm === r ? 'bg-primary text-white' : 'text-text-secondary hover:text-text-primary'
+                }`}
+              >
+                {r} km
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -242,9 +260,20 @@ export default function Nearby({ onBack }: NearbyProps) {
               <X className="w-4 h-4 text-text-secondary" />
             </button>
           </div>
-          <button className="w-full py-3 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark transition-colors shadow-md shadow-primary/20 flex items-center justify-center gap-2">
-            <span>Request Food Donation</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${selectedItem.lat},${selectedItem.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-3 bg-bg border border-border text-text-primary rounded-xl text-sm font-semibold hover:bg-border transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Navigation className="w-4 h-4 text-primary" />
+              <span>Directions</span>
+            </a>
+            <button className="flex-1 py-3 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-dark transition-colors shadow-md shadow-primary/20 flex items-center justify-center gap-2">
+              <span>Request Food Donation</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

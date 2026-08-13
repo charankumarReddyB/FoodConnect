@@ -30,4 +30,15 @@ public class LocationUtils {
     public static boolean isWithinRadius(Double lat1, Double lon1, Double lat2, Double lon2, double radiusKm) {
         return calculateDistanceKm(lat1, lon1, lat2, lon2) <= radiusKm;
     }
+
+    /**
+     * Formats distance in meters if less than 1.0 km, or kilometers if >= 1.0 km.
+     */
+    public static String formatDistance(double distanceKm) {
+        if (distanceKm < 1.0) {
+            int meters = (int) Math.round(distanceKm * 1000);
+            return meters + " m";
+        }
+        return String.format("%.1f km", distanceKm);
+    }
 }

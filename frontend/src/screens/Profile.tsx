@@ -76,6 +76,13 @@ export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
   const [saveLoading, setSaveLoading] = useState(false)
   const [saveMsg, setSaveMsg] = useState<string | null>(null)
 
+  // Primary Location State
+  const [savedAddress, setSavedAddress] = useState(user?.address || '100 Feet Road, Indiranagar, Bengaluru - 560038')
+  const [savedLat, setSavedLat] = useState<number>(user?.latitude || 12.9716)
+  const [savedLng, setSavedLng] = useState<number>(user?.longitude || 77.5946)
+  const [isLocatingGps, setIsLocatingGps] = useState(false)
+  const [locationStatus, setLocationStatus] = useState<string | null>(null)
+
   useEffect(() => {
     let mounted = true
     const fetchLatestUser = async () => {
@@ -84,6 +91,9 @@ export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
         const profile = await authApi.getCurrentUser()
         if (mounted && profile) {
           setUser(profile)
+          if (profile.address) setSavedAddress(profile.address)
+          if (profile.latitude) setSavedLat(profile.latitude)
+          if (profile.longitude) setSavedLng(profile.longitude)
         }
       } catch (_) {
         // Fallback to existing localStorage state
@@ -97,10 +107,86 @@ export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
     }
   }, [])
 
+  const handleAcquireGps = () => {
+    if (!navigator.geolocation) {
+      setLocationStatus('Geolocation is not supported by your browser.')
+      return
+    }
+    setIsLocatingGps(true)
+    setLocationStatus('Acquiring live GPS coordinates...')
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        setSavedLat(lat)
+        setSavedLng(lng)
+        setLocationStatus(`GPS Acquired: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+          const json = await res.json()
+          if (json && json.display_name) {
+            setSavedAddress(json.display_name)
+          }
+        } catch (_) {
+          setSavedAddress(`GPS Location (${lat.toFixed(4)}, ${lng.toFixed(4)})`)
+        } finally {
+          setIsLocatingGps(false)
+        }
+      },
+      (err) => {
+        setIsLocatingGps(false)
+        setLocationStatus('GPS permission denied or unavailable.')
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  const handleSaveLocation = async () => {
+    setSaveLoading(true)
+    setLocationStatus('Saving primary location to Cloud Firestore...')
+    try {
+      const updatedUser: UserProfile = {
+        ...user,
+        id: user?.id || `usr_${Date.now()}`,
+        fullName: user?.fullName || 'FoodConnect User',
+        email: user?.email || 'user@foodconnect.org',
+        role: (user?.role as any) || 'DONOR',
+        isActive: true,
+        address: savedAddress,
+        latitude: savedLat,
+        longitude: savedLng,
+      }
+      setUser(updatedUser)
+      localStorage.setItem('foodconnect_user', JSON.stringify(updatedUser))
+
+      // Write to Cloud Firestore collection 'users' synchronously
+      try {
+        const { setDoc, doc, GeoPoint } = await import('firebase/firestore')
+        const { firestore } = await import('../config/firebase')
+        await setDoc(doc(firestore, 'users', updatedUser.id), {
+          ...updatedUser,
+          location: new GeoPoint(savedLat, savedLng),
+          updatedAt: new Date().toISOString(),
+        }, { merge: true })
+      } catch (fsErr) {
+        console.warn('Firestore user location write notice:', fsErr)
+      }
+
+      setLocationStatus('Primary location updated and saved!')
+      setTimeout(() => setLocationStatus(null), 3000)
+    } catch (err: any) {
+      setLocationStatus('Failed to save location.')
+    } finally {
+      setSaveLoading(false)
+    }
+  }
+
   const handleOpenEdit = () => {
     setEditName(user?.fullName || (role === 'admin' ? 'Admin Operator' : 'User Name'))
     setEditPhone(user?.phone || '+91 98765 43210')
-    setEditAddress(user?.address || 'Bangalore, Karnataka')
+    setEditAddress(savedAddress)
     setEditing(true)
     setSaveMsg(null)
   }
@@ -116,6 +202,7 @@ export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
         address: editAddress.trim(),
       })
       setUser(updated)
+      setSavedAddress(editAddress.trim())
       setSaveMsg('Profile updated successfully!')
       setTimeout(() => {
         setEditing(false)
@@ -262,6 +349,91 @@ export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
                   <CheckCircle className="w-3 h-3" /> JWT Secured
                 </p>
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Primary Saved Location Card */}
+        <div className="bg-surface rounded-2xl border border-border shadow-sm p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xs font-bold text-text-secondary uppercase tracking-wider">Primary Saved Location</h2>
+              <p className="text-xs text-text-secondary mt-0.5">Used for nearby food matching and delivery routing (GeoPoint format)</p>
+            </div>
+            <button
+              type="button"
+              disabled={isLocatingGps}
+              onClick={handleAcquireGps}
+              className="flex items-center gap-1.5 bg-primary-50 hover:bg-primary-100 text-primary text-xs font-semibold px-3 py-1.5 rounded-xl border border-primary-200 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>{isLocatingGps ? 'Locating...' : '📍 Live GPS'}</span>
+            </button>
+          </div>
+
+          {locationStatus && (
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-xl flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {locationStatus}
+              </span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-[11px] font-bold text-text-secondary uppercase tracking-wide mb-1">
+                Saved Primary Address
+              </label>
+              <input
+                type="text"
+                value={savedAddress}
+                onChange={(e) => setSavedAddress(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-bg border border-border rounded-xl text-xs font-medium text-text-primary focus:outline-none focus:border-primary"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-text-secondary uppercase tracking-wide mb-1">
+                  Latitude
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  value={savedLat}
+                  onChange={(e) => setSavedLat(Number(e.target.value))}
+                  className="w-full px-3.5 py-2.5 bg-bg border border-border rounded-xl text-xs font-mono text-text-primary focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-text-secondary uppercase tracking-wide mb-1">
+                  Longitude
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  value={savedLng}
+                  onChange={(e) => setSavedLng(Number(e.target.value))}
+                  className="w-full px-3.5 py-2.5 bg-bg border border-border rounded-xl text-xs font-mono text-text-primary focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-text-secondary font-mono">
+                Firestore GeoPoint: ({savedLat.toFixed(4)}, {savedLng.toFixed(4)})
+              </span>
+              <button
+                type="button"
+                disabled={saveLoading}
+                onClick={handleSaveLocation}
+                className="flex items-center gap-1.5 bg-primary text-white text-xs font-bold px-4 py-2 rounded-xl shadow-md hover:bg-primary-dark transition-all disabled:opacity-50"
+              >
+                <Save className="w-3.5 h-3.5" />
+                <span>{saveLoading ? 'Saving...' : 'Save Location'}</span>
+              </button>
             </div>
           </div>
         </div>
