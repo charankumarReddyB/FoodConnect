@@ -298,27 +298,29 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                 </div>
               </div>
 
-              {/* Mode switcher tabs (Sign In / Register) */}
-              <div className="flex bg-bg rounded-xl p-1 mb-6 border border-border">
-                <button
-                  type="button"
-                  onClick={() => setMode('login')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    mode === 'login' ? 'bg-surface shadow-sm text-primary' : 'text-text-secondary'
-                  }`}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode('register')}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    mode === 'register' ? 'bg-surface shadow-sm text-primary' : 'text-text-secondary'
-                  }`}
-                >
-                  Register Account
-                </button>
-              </div>
+              {/* Mode switcher tabs (Sign In / Register) - Hidden for ADMIN */}
+              {cfg.backendRole !== 'ADMIN' && (
+                <div className="flex bg-bg rounded-xl p-1 mb-6 border border-border">
+                  <button
+                    type="button"
+                    onClick={() => setMode('login')}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      mode === 'login' ? 'bg-surface shadow-sm text-primary' : 'text-text-secondary'
+                    }`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode('register')}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      mode === 'register' ? 'bg-surface shadow-sm text-primary' : 'text-text-secondary'
+                    }`}
+                  >
+                    Register Account
+                  </button>
+                </div>
+              )}
 
               {/* Form Input fields */}
               <form
