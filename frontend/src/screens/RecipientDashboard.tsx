@@ -124,6 +124,9 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
       eta: '25 mins',
     }))
 
+  const recipientName = user?.fullName || user?.email?.split('@')[0] || 'Recipient Organization'
+  const recipientInitial = recipientName.charAt(0).toUpperCase()
+
   return (
     <div className="min-h-screen bg-bg font-inter">
       {/* Top bar */}
@@ -131,15 +134,15 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-white/70 text-xs">Good afternoon,</p>
-            <h1 className="text-lg font-bold text-white font-poppins">Annapoorna Trust 🙏</h1>
+            <h1 className="text-lg font-bold text-white font-poppins">{recipientName} 🙏</h1>
           </div>
           <div className="flex gap-2">
             <button onClick={() => onNavigate('notifications')} className="relative w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
               <Bell className="w-5 h-5 text-white" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full" />
             </button>
-            <button onClick={() => onNavigate('profile')} className="w-10 h-10 rounded-full bg-white/20 text-white font-bold text-sm flex items-center justify-center font-poppins">
-              A
+            <button onClick={() => onNavigate('profile')} className="w-10 h-10 rounded-full bg-white/20 text-white font-bold text-sm flex items-center justify-center font-poppins shadow-inner">
+              {recipientInitial}
             </button>
           </div>
         </div>

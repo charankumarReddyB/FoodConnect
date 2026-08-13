@@ -23,7 +23,7 @@ describe('Dashboards Component Suite', () => {
         <RecipientDashboard onNavigate={vi.fn()} />
       </LanguageProvider>
     );
-    expect(screen.getByText(/Annapoorna Trust/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search food donations/i)).toBeInTheDocument();
   });
 
   it('renders Volunteer Dashboard with delivery tasks', () => {
