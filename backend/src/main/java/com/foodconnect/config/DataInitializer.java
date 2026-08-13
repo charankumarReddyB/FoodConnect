@@ -25,7 +25,7 @@ public class DataInitializer implements CommandLineRunner {
             User admin = User.builder()
                     .fullName("Charan Kumar Reddy (Admin)")
                     .email("charankumarreddybantrothula@gmail.com")
-                    .phone("+919876543210")
+                    .phone("+919652233592")
                     .passwordHash(passwordEncoder.encode("charan@123"))
                     .role(UserRole.ADMIN)
                     .address("100 Feet Road, Indiranagar, Bengaluru, Karnataka 560038")
@@ -36,7 +36,7 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
 
             userRepository.save(admin);
-            log.info("Created default admin user: charankumarreddybantrothula@gmail.com / charan@123");
+            log.info("Created default admin user: charankumarreddybantrothula@gmail.com / charan@123 (+919652233592)");
         }
 
         if (!userRepository.existsByEmail("admin@foodconnect.in")) {
