@@ -38,33 +38,40 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
 
     // 2. Real-time Firestore query for AVAILABLE food
     const q = query(collection(firestore, 'donations'), where('status', 'in', ['AVAILABLE', 'CREATED']))
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const liveList: DonationItem[] = []
-      snapshot.forEach((doc) => {
-        const data = doc.data()
-        liveList.push({
-          id: doc.id,
-          donorId: data.donorId || '',
-          donorName: data.donorName || 'Food Donor',
-          title: data.title || data.foodName || 'Surplus Food',
-          description: data.description || '',
-          foodType: data.foodType || 'VEG',
-          quantityDescription: data.quantityDescription || data.quantity || '10 kg',
-          estimatedServings: data.estimatedServings || data.servings || 20,
-          preparedTime: data.preparedTime || new Date().toISOString(),
-          expiryTime: data.expiryTime || data.pickupDeadline || new Date().toISOString(),
-          pickupAddress: data.pickupAddress || data.location || 'Local Address',
-          deliveryMethod: data.deliveryMethod || 'VOLUNTEER_DELIVERY',
-          status: data.status || 'AVAILABLE',
-          imageUrls: data.imageUrls || [],
-          createdAt: data.createdAt || new Date().toISOString(),
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const liveList: DonationItem[] = []
+        snapshot.forEach((doc) => {
+          const data = doc.data()
+          liveList.push({
+            id: doc.id,
+            donorId: data.donorId || '',
+            donorName: data.donorName || 'Food Donor',
+            title: data.title || data.foodName || 'Surplus Food',
+            description: data.description || '',
+            foodType: data.foodType || 'VEG',
+            quantityDescription: data.quantityDescription || data.quantity || '10 kg',
+            estimatedServings: data.estimatedServings || data.servings || 20,
+            preparedTime: data.preparedTime || new Date().toISOString(),
+            expiryTime: data.expiryTime || data.pickupDeadline || new Date().toISOString(),
+            pickupAddress: data.pickupAddress || data.location || 'Local Address',
+            deliveryMethod: data.deliveryMethod || 'VOLUNTEER_DELIVERY',
+            status: data.status || 'AVAILABLE',
+            imageUrls: data.imageUrls || [],
+            createdAt: data.createdAt || new Date().toISOString(),
+          })
         })
-      })
-      if (liveList.length > 0) {
-        setDonations(liveList)
+        if (liveList.length > 0) {
+          setDonations(liveList)
+          setLoading(false)
+        }
+      },
+      (err) => {
+        console.warn('Firestore recipient live query warning:', err)
         setLoading(false)
       }
-    })
+    )
 
     return () => unsubscribe()
   }, [])
