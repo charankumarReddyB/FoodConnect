@@ -25,7 +25,7 @@ public class DataInitializer implements CommandLineRunner {
             User admin = User.builder()
                     .fullName("Charan Kumar Reddy (Admin)")
                     .email("charankumarreddybantrothula@gmail.com")
-                    .phone("+919652233592")
+                    .phone("+91 9652233592")
                     .passwordHash(passwordEncoder.encode("charan@123"))
                     .role(UserRole.ADMIN)
                     .address("100 Feet Road, Indiranagar, Bengaluru, Karnataka 560038")

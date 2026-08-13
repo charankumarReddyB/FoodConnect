@@ -95,6 +95,25 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
   const activeFoodCount = donations.length
   const totalMealsNearby = donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)
 
+  const stats = [
+    { label: 'Available Nearby', value: `${activeFoodCount}`, sub: 'within 10 km', icon: Package, color: 'bg-blue-50 text-blue-700' },
+    { label: 'Meals Available', value: `${totalMealsNearby}`, sub: 'est. servings', icon: TrendingUp, color: 'bg-emerald-50 text-emerald-700' },
+    { label: 'Active Requests', value: '2', sub: 'in transit', icon: CheckCircle, color: 'bg-amber-50 text-amber-700' },
+    { label: 'Verified Partners', value: '28', sub: 'registered donors', icon: Users, color: 'bg-purple-50 text-purple-700' },
+  ]
+
+  const activeRequests = donations
+    .filter(d => d.status === 'REQUESTED' || d.status === 'ACCEPTED' || d.status === 'IN_TRANSIT' || d.status === 'PICKED_UP')
+    .map(d => ({
+      id: d.id,
+      name: d.title,
+      qty: d.quantityDescription,
+      donor: d.donorName,
+      volunteer: 'FoodConnect Volunteer',
+      status: d.status === 'IN_TRANSIT' || d.status === 'PICKED_UP' ? 'in-transit' : 'accepted',
+      eta: '25 mins',
+    }))
+
   return (
     <div className="min-h-screen bg-bg font-inter">
       {/* Top bar */}
