@@ -33,6 +33,10 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
   const [quantityDescription, setQuantityDescription] = useState('15 kg')
   const [estimatedServings, setEstimatedServings] = useState(50)
   const [pickupAddress, setPickupAddress] = useState('No. 42, MG Road, Bangalore - 560001')
+  const [latitude, setLatitude] = useState(12.9716)
+  const [longitude, setLongitude] = useState(77.5946)
+  const [isLocating, setIsLocating] = useState(false)
+  const [gpsStatus, setGpsStatus] = useState<string | null>(null)
   const [delivery, setDelivery] = useState<'pickup' | 'volunteer'>('volunteer')
   const [selectedImg, setSelectedImg] = useState(0)
   const [customImageUrl, setCustomImageUrl] = useState<string | null>(null)
@@ -41,6 +45,42 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
   const [postedDonationId, setPostedDonationId] = useState<string>('')
+
+  const fetchLiveLocation = () => {
+    if (!navigator.geolocation) {
+      setErrorMsg('Geolocation is not supported by your browser')
+      return
+    }
+    setIsLocating(true)
+    setGpsStatus('Acquiring live GPS location...')
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const lat = position.coords.latitude
+        const lng = position.coords.longitude
+        setLatitude(lat)
+        setLongitude(lng)
+        setGpsStatus(`GPS Acquired (${lat.toFixed(4)}, ${lng.toFixed(4)})`)
+
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
+          const json = await res.json()
+          if (json && json.display_name) {
+            setPickupAddress(json.display_name)
+          }
+        } catch (_) {
+          setPickupAddress(`Live Location: ${lat.toFixed(4)}, ${lng.toFixed(4)}`)
+        } finally {
+          setIsLocating(false)
+        }
+      },
+      (error) => {
+        setIsLocating(false)
+        setGpsStatus('GPS Permission denied or unavailable. Please enter address manually.')
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -71,19 +111,19 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
       preparedTime: new Date().toISOString(),
       expiryTime: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
       pickupAddress: pickupAddress.trim(),
-      latitude: 12.9716,
-      longitude: 77.5946,
+      latitude,
+      longitude,
       deliveryMethod: delivery === 'volunteer' ? ('VOLUNTEER_DELIVERY' as const) : ('SELF_PICKUP' as const),
       imageUrls: [finalImgUrl],
     }
 
     try {
-      // 1. Send REST API Request
+      // 1. Primary: REST API Submission (Spring Boot uses Firebase Admin SDK - bypasses security rules)
       const apiRes = await donationApi.createDonation(payload)
       const targetId = apiRes?.id || donationId
       setPostedDonationId(targetId)
 
-      // 2. Synchronize to Cloud Firestore 'donations' collection synchronously
+      // 2. Client Firestore Sync (Silent catch for permission boundaries)
       try {
         await setDoc(doc(firestore, 'donations', targetId), {
           ...payload,
@@ -95,13 +135,12 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
           updatedAt: new Date().toISOString(),
         })
       } catch (fsErr) {
-        console.warn('Firestore setDoc client sync warning:', fsErr)
+        console.warn('Client Firestore write boundary notice:', fsErr)
       }
 
       setSubmitted(true)
     } catch (err: any) {
       console.warn('Backend REST API unavailable, writing directly to Cloud Firestore collection...')
-      // Direct Firestore write fallback
       try {
         await setDoc(doc(firestore, 'donations', donationId), {
           ...payload,
@@ -115,7 +154,7 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
         setPostedDonationId(donationId)
         setSubmitted(true)
       } catch (fsWriteErr: any) {
-        setErrorMsg(fsWriteErr.message || 'Failed to submit donation to database. Please check connection.')
+        setErrorMsg('Failed to post donation. Please check your network connection.')
       }
     } finally {
       setLoading(false)
@@ -305,7 +344,28 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
 
         {/* Time & pickup */}
         <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-text-primary font-poppins">Pickup Details</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-text-primary font-poppins">Pickup Details</h2>
+            <button
+              type="button"
+              disabled={isLocating}
+              onClick={fetchLiveLocation}
+              className="flex items-center gap-1.5 bg-primary-50 hover:bg-primary-100 text-primary text-xs font-semibold px-3 py-1.5 rounded-xl border border-primary-200 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <MapPin className="w-3.5 h-3.5" />
+              <span>{isLocating ? 'Acquiring GPS...' : '📍 Use Live GPS Location'}</span>
+            </button>
+          </div>
+
+          {gpsStatus && (
+            <div className="p-2.5 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium rounded-xl flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {gpsStatus}
+              </span>
+              <span className="text-[10px] text-emerald-600 font-bold">Lat: {latitude.toFixed(4)}, Lng: {longitude.toFixed(4)}</span>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold text-text-secondary mb-1.5 uppercase tracking-wide">

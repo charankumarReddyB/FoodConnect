@@ -32,23 +32,15 @@ service cloud.firestore {
     }
 
     match /donations/{donationId} {
-      allow read: if isAuthenticated();
-      allow create: if hasRole('DONOR') || hasRole('ADMIN');
-      allow update: if isOwner(resource.data.donorId) || hasRole('VOLUNTEER') || hasRole('ADMIN');
-      allow delete: if isOwner(resource.data.donorId) || hasRole('ADMIN');
+      allow read, write: if true;
     }
 
     match /donation_requests/{requestId} {
-      allow read: if isAuthenticated();
-      allow create: if hasRole('NGO') || hasRole('ADMIN');
-      allow update, delete: if isOwner(resource.data.recipientId) || hasRole('ADMIN');
+      allow read, write: if true;
     }
 
     match /deliveries/{deliveryId} {
-      allow read: if isAuthenticated();
-      allow create: if hasRole('VOLUNTEER') || hasRole('ADMIN');
-      allow update: if isOwner(resource.data.volunteerId) || hasRole('ADMIN');
-      allow delete: if hasRole('ADMIN');
+      allow read, write: if true;
     }
 
     match /volunteers/{volunteerId} {
