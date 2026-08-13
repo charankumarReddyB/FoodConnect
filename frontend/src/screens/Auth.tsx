@@ -25,8 +25,8 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
 
   // Email & Password state
   const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState(() => (role === 'admin' ? 'charankumarreddybantrothula@gmail.com' : 'arjun@example.com'))
-  const [password, setPassword] = useState(() => (role === 'admin' ? 'charan@123' : 'password123'))
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [forgotStep, setForgotStep] = useState<'request' | 'reset'>('request')
@@ -328,6 +328,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                   e.preventDefault()
                   if (!loading) handleEmailAuth()
                 }}
+                autoComplete="off"
                 className="space-y-4"
               >
                 {mode === 'register' && (
@@ -341,7 +342,8 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Arjun Sharma"
+                        placeholder="Enter full name"
+                        autoComplete="off"
                         className="w-full pl-10 pr-4 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary text-text-primary placeholder-text-secondary"
                       />
                     </div>
@@ -358,7 +360,8 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="user@example.com"
+                      placeholder="Enter email address"
+                      autoComplete="off"
                       className="w-full pl-10 pr-4 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary text-text-primary placeholder-text-secondary"
                     />
                   </div>
@@ -375,6 +378,7 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
+                      autoComplete="new-password"
                       className="w-full pl-10 pr-11 py-3 bg-bg border border-border rounded-xl text-sm focus:outline-none focus:border-primary text-text-primary placeholder-text-secondary"
                     />
                     <button
