@@ -282,8 +282,8 @@ export const authApi = {
       const isAdminEmail = inputEmail === 'charankumarreddybantrothula@gmail.com' || inputEmail === 'admin@foodconnect.in'
       const isValidAdminPass = inputPass === 'charan@123' || inputPass === 'Admin@123'
 
-      if (isAdminEmail && !isValidAdminPass) {
-        throw new Error('Invalid Administrator password. Please use charan@123.')
+      if (!isAdminEmail || !isValidAdminPass) {
+        throw new Error('Invalid email or password.')
       }
 
       const mockUser: UserProfile = {
