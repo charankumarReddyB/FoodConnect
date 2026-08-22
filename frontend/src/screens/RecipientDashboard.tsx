@@ -130,7 +130,7 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
   return (
     <div className="min-h-screen bg-bg font-inter">
       {/* Top bar */}
-      <div className="bg-[#1565C0] px-6 py-5">
+      <div className="bg-[#1565C0] px-4 sm:px-6 py-4 sm:py-5">
         <div className="flex items-center justify-between mb-4">
           <div>
             <p className="text-white/70 text-xs">Good afternoon,</p>
@@ -164,9 +164,9 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
 
       <div className="max-w-5xl mx-auto px-4 lg:px-8 py-6 space-y-8">
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {stats.map((s) => (
-            <div key={s.label} className="bg-surface rounded-2xl border border-border p-5 shadow-sm">
+            <div key={s.label} className="bg-surface rounded-2xl border border-border p-4 sm:p-5 shadow-sm">
               <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center mb-3`}>
                 <s.icon className="w-5 h-5" />
               </div>
@@ -183,20 +183,22 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
             <h2 className="text-base font-bold text-text-primary font-poppins mb-4">Active Requests</h2>
             <div className="space-y-3">
               {activeRequests.map((r, i) => (
-                <div key={i} className="bg-surface rounded-2xl border border-border p-4 shadow-sm flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                    r.status === 'in-transit' ? 'bg-accent-50' : 'bg-[#E3F2FD]'
-                  }`}>
-                    {r.status === 'in-transit'
-                      ? <TrendingUp className="w-5 h-5 text-accent" />
-                      : <CheckCircle className="w-5 h-5 text-[#1565C0]" />
-                    }
+                <div key={i} className="bg-surface rounded-2xl border border-border p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      r.status === 'in-transit' ? 'bg-accent-50' : 'bg-[#E3F2FD]'
+                    }`}>
+                      {r.status === 'in-transit'
+                        ? <TrendingUp className="w-5 h-5 text-accent" />
+                        : <CheckCircle className="w-5 h-5 text-[#1565C0]" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-text-primary truncate">{r.name} · {r.qty}</p>
+                      <p className="text-xs text-text-secondary mt-0.5 truncate">From {r.donor} · Volunteer: {r.volunteer}</p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-text-primary">{r.name} · {r.qty}</p>
-                    <p className="text-xs text-text-secondary mt-0.5">From {r.donor} · Volunteer: {r.volunteer}</p>
-                  </div>
-                  <div className="text-right flex-shrink-0">
+                  <div className="flex justify-end sm:text-right flex-shrink-0">
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
                       r.status === 'in-transit' ? 'bg-accent-50 text-accent' : 'bg-[#E3F2FD] text-[#1565C0]'
                     }`}>
@@ -267,30 +269,32 @@ export default function RecipientDashboard({ onNavigate }: RecipientDashboardPro
               donations.map((f) => {
                 const imgUrl = f.imageUrls && f.imageUrls.length > 0 ? f.imageUrls[0] : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=80&h=80&fit=crop&auto=format'
                 return (
-                  <div key={f.id} className="bg-surface rounded-2xl border border-border p-4 shadow-sm flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-bg border border-border">
-                      <img src={imgUrl} alt={f.title} className="w-full h-full object-cover" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-text-primary">{f.title}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          f.foodType === 'VEG' ? 'bg-primary-50 text-primary' : 'bg-[#FFEBEE] text-[#B71C1C]'
-                        }`}>
-                          {f.foodType}
-                        </span>
+                  <div key={f.id} className="bg-surface rounded-2xl border border-border p-3.5 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl overflow-hidden flex-shrink-0 bg-bg border border-border">
+                        <img src={imgUrl} alt={f.title} className="w-full h-full object-cover" />
                       </div>
-                      <p className="text-xs text-text-secondary mt-0.5">{f.donorName || 'Food Donor'} · {f.quantityDescription} ({f.estimatedServings} servings)</p>
-                      <div className="flex items-center gap-3 mt-1">
-                        <span className="flex items-center gap-1 text-xs text-text-secondary">
-                          <MapPin className="w-3 h-3" />{f.pickupAddress}
-                        </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-text-primary truncate">{f.title}</p>
+                          <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-full font-medium ${
+                            f.foodType === 'VEG' ? 'bg-primary-50 text-primary' : 'bg-[#FFEBEE] text-[#B71C1C]'
+                          }`}>
+                            {f.foodType}
+                          </span>
+                        </div>
+                        <p className="text-xs text-text-secondary mt-0.5 truncate">{f.donorName || 'Food Donor'} · {f.quantityDescription} ({f.estimatedServings} servings)</p>
+                        <div className="flex items-center gap-3 mt-1">
+                          <span className="flex items-center gap-1 text-xs text-text-secondary truncate">
+                            <MapPin className="w-3 h-3 shrink-0" /><span className="truncate">{f.pickupAddress}</span>
+                          </span>
+                        </div>
                       </div>
                     </div>
                     <button
                       disabled={requestingId === f.id}
                       onClick={() => handleClaim(f)}
-                      className="flex-shrink-0 text-xs font-bold px-4 py-2 rounded-xl bg-[#1565C0] text-white shadow-sm hover:bg-[#0D47A1] disabled:opacity-50"
+                      className="w-full sm:w-auto flex-shrink-0 text-xs font-bold px-4 py-2.5 sm:py-2 rounded-xl bg-[#1565C0] text-white shadow-sm hover:bg-[#0D47A1] disabled:opacity-50 cursor-pointer"
                     >
                       {requestingId === f.id ? 'Claiming...' : 'Request Food'}
                     </button>

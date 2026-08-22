@@ -294,16 +294,17 @@ export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
       {/* Content Container */}
       <div className="max-w-2xl mx-auto px-4 -mt-12 space-y-5">
         {/* Stats Card */}
-        <div className="bg-surface rounded-2xl border border-border shadow-xl p-5 backdrop-blur-sm">
-          <div className="grid grid-cols-4 divide-x divide-border">
+        <div className="bg-surface rounded-2xl border border-border shadow-xl p-4 sm:p-5 backdrop-blur-sm">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-0 sm:divide-x divide-border">
             {stats.map((s) => (
-              <div key={s.label} className="text-center px-1">
-                <p className="text-xl font-black text-text-primary font-poppins">{s.value}</p>
-                <p className="text-[11px] text-text-secondary mt-1 font-medium leading-tight">{s.label}</p>
+              <div key={s.label} className="text-center px-1 py-1">
+                <p className="text-lg sm:text-xl font-black text-text-primary font-poppins">{s.value}</p>
+                <p className="text-[10px] sm:text-[11px] text-text-secondary mt-0.5 sm:mt-1 font-medium leading-tight">{s.label}</p>
               </div>
             ))}
           </div>
         </div>
+
 
         {/* Verification & Account Badges */}
         <div className="bg-surface rounded-2xl border border-border shadow-sm p-5 space-y-3">
@@ -466,7 +467,7 @@ export default function Profile({ onBack, role, onNavigate }: ProfileProps) {
               Verified <Sparkles className="w-3.5 h-3.5" />
             </span>
           </div>
-          <div className="grid grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
             {badges.map((b) => (
               <div key={b.name} className="flex flex-col items-center text-center p-2 rounded-xl bg-bg border border-border hover:border-primary/30 transition-all">
                 <div className="w-10 h-10 rounded-xl bg-surface shadow-xs flex items-center justify-center mb-1">

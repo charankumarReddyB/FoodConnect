@@ -225,9 +225,9 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
         )}
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {stats.map((s) => (
-            <div key={s.label} className="bg-surface rounded-2xl border border-border p-5 shadow-sm">
+            <div key={s.label} className="bg-surface rounded-2xl border border-border p-4 sm:p-5 shadow-sm">
               <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center mb-3`}>
                 <s.icon className="w-5 h-5" />
               </div>
@@ -239,37 +239,38 @@ export default function VolunteerDashboard({ onNavigate }: VolunteerDashboardPro
         </div>
 
         {/* Tab Selection Navigation Bar */}
-        <div className="bg-surface rounded-2xl border border-border p-1.5 flex items-center gap-2">
+        <div className="bg-surface rounded-2xl border border-border p-1.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <button
             onClick={() => setActiveTab('available')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'available' ? 'bg-[#6A1B9A] text-white shadow-md' : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            <Truck className="w-4 h-4" />
+            <Truck className="w-4 h-4 flex-shrink-0" />
             <span>Available Jobs ({availableTasks.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('active')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'active' ? 'bg-amber-600 text-white shadow-md' : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            <Clock className="w-4 h-4" />
+            <Clock className="w-4 h-4 flex-shrink-0" />
             <span>My Active & Accepted ({activeDeliveries.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('completed')}
-            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'completed' ? 'bg-emerald-600 text-white shadow-md' : 'text-text-secondary hover:text-text-primary'
             }`}
           >
-            <CheckCircle className="w-4 h-4" />
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
             <span>Completed ({completedDeliveries.length})</span>
           </button>
         </div>
+
 
         {/* Tab 1: Available Jobs */}
         {activeTab === 'available' && (

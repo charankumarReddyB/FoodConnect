@@ -134,12 +134,12 @@ export default function History({ onBack, role }: HistoryProps) {
       </div>
 
       {/* Filter tabs */}
-      <div className="bg-surface border-b border-border px-4 py-2 flex gap-2">
+      <div className="bg-surface border-b border-border px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none">
         {(['all', 'delivered', 'pending', 'cancelled'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
-            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
+            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 transition-all cursor-pointer ${
               filter === f ? 'bg-primary text-white' : 'bg-bg text-text-secondary border border-border'
             }`}
           >
@@ -149,18 +149,19 @@ export default function History({ onBack, role }: HistoryProps) {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3 p-4 max-w-2xl mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 p-4 max-w-2xl mx-auto">
         {[
           { label: 'Delivered', value: deliveredCount, color: 'text-success', bg: 'bg-success/10' },
           { label: 'Total Recorded', value: `${donations.length}`, color: 'text-primary', bg: 'bg-primary-50' },
           { label: 'Meals Provided', value: `${donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)}`, color: 'text-accent', bg: 'bg-accent-50' },
         ].map((s) => (
-          <div key={s.label} className={`${s.bg} rounded-2xl p-4 text-center`}>
-            <p className={`text-xl font-extrabold font-poppins ${s.color}`}>{s.value}</p>
-            <p className="text-xs text-text-secondary mt-0.5">{s.label}</p>
+          <div key={s.label} className={`${s.bg} rounded-2xl p-3 sm:p-4 text-center`}>
+            <p className={`text-lg sm:text-xl font-extrabold font-poppins ${s.color}`}>{s.value}</p>
+            <p className="text-[11px] sm:text-xs text-text-secondary mt-0.5 font-medium">{s.label}</p>
           </div>
         ))}
       </div>
+
 
       {/* List */}
       <div className="max-w-2xl mx-auto px-4 space-y-3 pb-8">
@@ -188,12 +189,12 @@ export default function History({ onBack, role }: HistoryProps) {
                   <p className="text-xs text-text-secondary mt-0.5">{d.pickupAddress} · {d.quantityDescription}</p>
                   <p className="text-xs text-text-secondary">{d.createdAt ? new Date(d.createdAt).toLocaleDateString() : 'Today'}</p>
                 </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className={`hidden sm:flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${sc.bg} ${sc.text}`}>
-                    <sc.icon className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+                  <span className={`flex items-center gap-1 text-[10px] sm:text-xs font-semibold px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full ${sc.bg} ${sc.text}`}>
+                    <sc.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                     {sc.label}
                   </span>
-                  <ChevronRight className="w-4 h-4 text-text-secondary" />
+                  <ChevronRight className="w-4 h-4 text-text-secondary shrink-0" />
                 </div>
               </div>
             )

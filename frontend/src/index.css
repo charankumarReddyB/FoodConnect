@@ -44,12 +44,25 @@ html, body, #root {
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
   background-color: #F8FAFC;
   color: #0F172A;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* Hide scrollbar utilities */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 
 /* Glassmorphism Styles */
 .glass-card {

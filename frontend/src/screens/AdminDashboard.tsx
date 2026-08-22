@@ -156,19 +156,19 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
   return (
     <div className="min-h-screen bg-bg font-inter">
       {/* Top bar */}
-      <div className="bg-surface border-b border-border px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      <div className="bg-surface border-b border-border px-4 sm:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sticky top-0 z-10">
         <div>
           <p className="text-xs text-text-secondary">Admin Console</p>
           <h1 className="text-lg font-bold text-text-primary font-poppins flex items-center gap-1.5">
             FoodConnect Admin <ShieldCheck className="w-5 h-5 text-rose-600 inline" />
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
           {/* Navigation Tab Switcher */}
           <div className="flex bg-bg p-1 rounded-xl border border-border">
             <button
               onClick={() => setActiveTab('analytics')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'analytics'
                   ? 'bg-surface shadow-sm text-text-primary'
                   : 'text-text-secondary hover:text-text-primary'
@@ -178,7 +178,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </button>
             <button
               onClick={() => setActiveTab('checkins')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'checkins'
                   ? 'bg-surface shadow-sm text-[#B71C1C]'
                   : 'text-text-secondary hover:text-text-primary'
@@ -190,11 +190,11 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           </div>
 
           <div className="flex gap-2">
-            <button onClick={() => onNavigate('notifications')} className="relative w-10 h-10 rounded-xl bg-bg border border-border flex items-center justify-center">
+            <button onClick={() => onNavigate('notifications')} className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-bg border border-border flex items-center justify-center">
               <Bell className="w-5 h-5 text-text-secondary" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full" />
             </button>
-            <button onClick={() => onNavigate('profile')} className="w-10 h-10 rounded-full bg-[#B71C1C] text-white font-bold text-sm flex items-center justify-center font-poppins">
+            <button onClick={() => onNavigate('profile')} className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#B71C1C] text-white font-bold text-sm flex items-center justify-center font-poppins">
               A
             </button>
           </div>
@@ -232,7 +232,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
 
               <button
                 onClick={() => setShowManualModal(true)}
-                className="bg-[#B71C1C] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow hover:bg-[#880E4F] flex items-center gap-2 transition-all cursor-pointer"
+                className="bg-[#B71C1C] text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow hover:bg-[#880E4F] flex items-center gap-2 transition-all cursor-pointer w-full sm:w-auto justify-center"
               >
                 <Plus className="w-4 h-4" />
                 <span>Mark User Checked-in</span>
@@ -284,7 +284,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                  <table className="w-full text-left border-collapse min-w-[600px]">
                     <thead>
                       <tr className="bg-bg border-b border-border text-[11px] font-bold text-text-secondary uppercase tracking-wider">
                         <th className="py-3.5 px-5">User</th>
@@ -369,14 +369,15 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           /* STANDARD ANALYTICAL DASHBOARD VIEW */
           <>
             {/* KPI cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+
               {[
                 { label: 'Total Users', value: '8,240', change: '+124 this week', icon: Users, color: 'bg-[#E3F2FD] text-[#1565C0]', trend: '+2.4%' },
                 { label: 'Total Donations', value: '12,840', change: '+390 this month', icon: Package, color: 'bg-primary-50 text-primary', trend: '+14%' },
                 { label: 'Verified NGOs', value: '284', change: '3 pending review', icon: ShieldCheck, color: 'bg-[#FFEBEE] text-[#B71C1C]', trend: '' },
                 { label: 'Active Volunteers', value: '1,642', change: '+68 this month', icon: Truck, color: 'bg-[#F3E5F5] text-[#6A1B9A]', trend: '+5%' },
               ].map((s) => (
-                <div key={s.label} className="bg-surface rounded-2xl border border-border p-5 shadow-sm">
+                <div key={s.label} className="bg-surface rounded-2xl border border-border p-4 sm:p-5 shadow-sm">
                   <div className="flex items-start justify-between mb-3">
                     <div className={`w-9 h-9 rounded-xl ${s.color} flex items-center justify-center`}>
                       <s.icon className="w-5 h-5" />
@@ -395,7 +396,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             {/* Charts row */}
             <div className="grid lg:grid-cols-3 gap-6">
               {/* Donation trend */}
-              <div className="lg:col-span-2 bg-surface rounded-2xl border border-border p-6 shadow-sm">
+              <div className="lg:col-span-2 bg-surface rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                   <div>
                     <h2 className="text-base font-bold text-text-primary font-poppins">Donation Activity</h2>
@@ -426,7 +427,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               </div>
 
               {/* City pie */}
-              <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+              <div className="bg-surface rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
                 <h2 className="text-base font-bold text-text-primary font-poppins mb-1">By City</h2>
                 <p className="text-xs text-text-secondary mb-4">Donation share distribution</p>
                 <ResponsiveContainer width="100%" height={140}>
@@ -454,7 +455,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             </div>
 
             {/* Bar chart */}
-            <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+            <div className="bg-surface rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-base font-bold text-text-primary font-poppins">Meals Served per Month</h2>
@@ -477,7 +478,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             {/* Bottom row */}
             <div className="grid lg:grid-cols-2 gap-6">
               {/* Recent activity */}
-              <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+              <div className="bg-surface rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-base font-bold text-text-primary font-poppins">Recent Activity</h2>
                   <BarChart3 className="w-4 h-4 text-text-secondary" />
@@ -498,7 +499,7 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
               </div>
 
               {/* Pending verifications */}
-              <div className="bg-surface rounded-2xl border border-border p-6 shadow-sm">
+              <div className="bg-surface rounded-2xl border border-border p-4 sm:p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-base font-bold text-text-primary font-poppins">Pending Verification</h2>
                   <span className="text-xs font-bold bg-warning/10 text-warning px-2 py-0.5 rounded-full">
@@ -507,26 +508,28 @@ export default function AdminDashboard({ onNavigate }: AdminDashboardProps) {
                 </div>
                 <div className="space-y-3">
                   {pendingVerifications.map((p, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-bg border border-border">
-                      <div className="w-9 h-9 rounded-xl bg-[#FFEBEE] flex items-center justify-center flex-shrink-0">
-                        <ShieldCheck className="w-5 h-5 text-[#B71C1C]" />
+                    <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl bg-bg border border-border">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-9 h-9 rounded-xl bg-[#FFEBEE] flex items-center justify-center flex-shrink-0">
+                          <ShieldCheck className="w-5 h-5 text-[#B71C1C]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-text-primary truncate">{p.name}</p>
+                          <p className="text-xs text-text-secondary truncate">{p.city} · {p.type} · {p.submitted}</p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-text-primary">{p.name}</p>
-                        <p className="text-xs text-text-secondary">{p.city} · {p.type} · {p.submitted}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button className="text-xs font-bold text-success bg-success/10 px-3 py-1.5 rounded-lg hover:bg-success/20">
+                      <div className="flex gap-2 w-full sm:w-auto shrink-0 justify-end">
+                        <button className="flex-1 sm:flex-initial text-xs font-bold text-success bg-success/10 px-3 py-1.5 rounded-lg hover:bg-success/20 cursor-pointer">
                           Verify
                         </button>
-                        <button className="text-xs font-bold text-error bg-error/10 px-3 py-1.5 rounded-lg hover:bg-error/20">
+                        <button className="flex-1 sm:flex-initial text-xs font-bold text-error bg-error/10 px-3 py-1.5 rounded-lg hover:bg-error/20 cursor-pointer">
                           Reject
                         </button>
                       </div>
                     </div>
                   ))}
                 </div>
-                <button className="w-full mt-4 text-sm text-[#B71C1C] font-semibold border border-[#FFCDD2] rounded-xl py-2.5 hover:bg-[#FFEBEE]">
+                <button className="w-full mt-4 text-sm text-[#B71C1C] font-semibold border border-[#FFCDD2] rounded-xl py-2.5 hover:bg-[#FFEBEE] cursor-pointer">
                   View All Verifications
                 </button>
               </div>

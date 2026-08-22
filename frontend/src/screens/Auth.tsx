@@ -171,19 +171,19 @@ export default function Auth({ role, onSuccess, onBack }: AuthProps) {
   }
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center px-6 py-12 font-inter bg-gradient-hero">
+    <div className="min-h-screen bg-bg flex items-center justify-center px-3.5 sm:px-6 py-6 sm:py-12 font-inter bg-gradient-hero">
       <div className="w-full max-w-md animate-scale-in">
         {/* Back button */}
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 mb-8 font-semibold cursor-pointer btn-press"
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 mb-6 sm:mb-8 font-semibold cursor-pointer btn-press"
         >
           <ArrowLeft className="w-4 h-4" />
           Back
         </button>
 
         {/* Auth Card */}
-        <div className="bg-surface/90 backdrop-blur-xl rounded-3xl border border-slate-200 shadow-xl p-8">
+        <div className="bg-surface/90 backdrop-blur-xl rounded-3xl border border-slate-200 shadow-xl p-5 sm:p-8">
           {/* Logo & Role Badge */}
           <div className="flex items-center justify-between mb-6">
             <Logo size="sm" variant="full" />

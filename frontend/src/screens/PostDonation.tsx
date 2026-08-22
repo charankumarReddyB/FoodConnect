@@ -232,15 +232,15 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
         )}
 
         {/* Food photos */}
-        <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm">
+        <div className="bg-surface rounded-2xl border border-border p-4 sm:p-5 shadow-sm">
           <h2 className="text-sm font-bold text-text-primary font-poppins mb-3">Food Photos</h2>
-          <div className="flex gap-3">
+          <div className="flex gap-2.5 sm:gap-3 overflow-x-auto pb-1.5 scrollbar-none">
             {foodImages.map((img, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => { setSelectedImg(i); setCustomImageUrl(null); }}
-                className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 flex-shrink-0 ${
+                className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 flex-shrink-0 cursor-pointer ${
                   selectedImg === i && !customImageUrl ? 'border-primary' : 'border-border'
                 }`}
               >
@@ -253,19 +253,20 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
               </button>
             ))}
 
-            <label className="w-20 h-20 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 hover:border-primary hover:bg-primary-50 text-text-secondary hover:text-primary flex-shrink-0 cursor-pointer relative overflow-hidden">
+            <label className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 hover:border-primary hover:bg-primary-50 text-text-secondary hover:text-primary flex-shrink-0 cursor-pointer relative overflow-hidden">
               {customImageUrl ? (
                 <img src={customImageUrl} alt="Uploaded" className="w-full h-full object-cover" />
               ) : (
                 <>
-                  <Camera className="w-5 h-5" />
-                  <span className="text-[10px] font-medium">Upload</span>
+                  <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-[9px] sm:text-[10px] font-medium">Upload</span>
                 </>
               )}
               <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
             </label>
           </div>
         </div>
+
 
         {/* Food details */}
         <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm space-y-4">
@@ -327,7 +328,7 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs font-semibold text-text-secondary mb-1.5 uppercase tracking-wide">
                 <Package className="w-3.5 h-3.5 inline mr-1" />Quantity Description
@@ -405,7 +406,7 @@ export default function PostDonation({ onBack, onSuccess }: PostDonationProps) {
         {/* Delivery preference */}
         <div className="bg-surface rounded-2xl border border-border p-5 shadow-sm">
           <h2 className="text-sm font-bold text-text-primary font-poppins mb-3">Delivery Preference</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { key: 'volunteer' as const, label: 'Volunteer Delivery', desc: 'A nearby volunteer picks up and delivers', icon: Truck },
               { key: 'pickup' as const, label: 'Recipient Pickup', desc: 'The recipient collects food directly', icon: Building },

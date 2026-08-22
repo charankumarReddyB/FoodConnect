@@ -144,23 +144,25 @@ export default function Layout({ children, screen, role, onNavigate, notifCount 
   return (
     <div className="flex min-h-screen bg-bg font-inter w-full max-w-full overflow-x-hidden">
       {/* Mobile Top Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-surface/95 backdrop-blur-md border-b border-border z-30 px-4 flex items-center justify-between shadow-xs">
-        <div className="flex items-center gap-3">
+      <header className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-surface/95 backdrop-blur-md border-b border-border z-30 px-3 sm:px-4 flex items-center justify-between shadow-xs">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-xl text-text-primary hover:bg-bg cursor-pointer transition-colors"
+            className="p-1.5 sm:p-2 rounded-xl text-text-primary hover:bg-bg cursor-pointer transition-colors shrink-0"
             aria-label="Open Mobile Menu"
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
-          <Logo size="sm" variant="full" />
+          <div className="shrink-0">
+            <Logo size="sm" variant="full" />
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <CheckInButton variant="header" />
           <button
             onClick={() => onNavigate('profile')}
-            className={`w-9 h-9 rounded-full ${colors.bg} flex items-center justify-center text-white font-bold text-sm shadow-sm overflow-hidden shrink-0 cursor-pointer`}
+            className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full ${colors.bg} flex items-center justify-center text-white font-bold text-xs sm:text-sm shadow-sm overflow-hidden shrink-0 cursor-pointer`}
           >
             {profileImage ? (
               <img src={profileImage} alt={displayName} className="w-full h-full object-cover" />
@@ -366,38 +368,39 @@ export default function Layout({ children, screen, role, onNavigate, notifCount 
       </aside>
 
       {/* Main content with Mobile Top Header Spacing */}
-      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0 pb-24 lg:pb-0 min-h-screen overflow-x-hidden w-full max-w-full">
+      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0 pb-20 lg:pb-0 min-h-screen overflow-x-hidden w-full max-w-full">
         {children}
       </main>
 
       {/* Bottom Nav — mobile */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-md border-t border-border z-30 px-2 pt-2 pb-safe shadow-lg">
-        <div className="flex items-center justify-around">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-surface/95 backdrop-blur-md border-t border-border z-30 px-1 sm:px-2 pt-1.5 pb-safe shadow-lg">
+        <div className="flex items-center justify-around max-w-md mx-auto">
           {items.slice(0, 5).map((item) => {
             const active = screen === item.screen
             return (
               <button
                 key={item.screen}
                 onClick={() => onNavigate(item.screen)}
-                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-xl flex-1 relative cursor-pointer ${
+                className={`flex flex-col items-center gap-0.5 sm:gap-1 px-0.5 sm:px-2 py-1 rounded-xl flex-1 min-w-0 relative cursor-pointer transition-colors ${
                   active ? 'text-primary' : 'text-text-secondary'
                 }`}
               >
                 <div className="relative">
-                  <item.icon className="w-6 h-6" />
+                  <item.icon className="w-5 h-5 sm:w-6 sm:h-6" />
                   {item.screen === 'notifications' && notifCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-accent text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1.5 bg-accent text-white text-[8px] sm:text-[9px] font-bold rounded-full w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center">
                       {notifCount}
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className="text-[9px] sm:text-[10px] font-medium truncate w-full text-center leading-tight">{item.label}</span>
                 {active && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full bg-primary" />}
               </button>
             )
           })}
         </div>
       </nav>
+
     </div>
   )
 }

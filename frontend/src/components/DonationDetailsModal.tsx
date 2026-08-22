@@ -31,17 +31,17 @@ export default function DonationDetailsModal({ donation, onClose, onClaim }: Don
     : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&h=400&fit=crop&auto=format'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-surface border border-border rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative animate-scale-in">
         
         {/* Header Image */}
-        <div className="relative h-48 w-full bg-bg">
+        <div className="relative h-40 sm:h-48 w-full bg-bg">
           <img src={imgUrl} alt={donation.title} className="w-full h-full object-cover rounded-t-3xl" />
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-md transition-all"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-md transition-all cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
           <div className="absolute bottom-3 left-4">
             <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full border ${sc.bg}`}>
@@ -52,11 +52,11 @@ export default function DonationDetailsModal({ donation, onClose, onClaim }: Don
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-5 flex-1">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1">
           <div>
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-xl font-bold text-text-primary font-poppins">{donation.title}</h2>
-              <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase ${
+              <h2 className="text-lg sm:text-xl font-bold text-text-primary font-poppins">{donation.title}</h2>
+              <span className={`text-[10px] sm:text-xs px-2.5 py-1 rounded-full font-bold uppercase ${
                 donation.foodType === 'VEG' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
               }`}>
                 {donation.foodType}
@@ -67,14 +67,15 @@ export default function DonationDetailsModal({ donation, onClose, onClaim }: Don
 
           {/* Description */}
           {donation.description && (
-            <div className="bg-bg p-4 rounded-2xl border border-border">
+            <div className="bg-bg p-3.5 sm:p-4 rounded-2xl border border-border">
               <p className="text-xs text-text-secondary font-semibold uppercase tracking-wide mb-1">Description</p>
-              <p className="text-sm text-text-primary leading-relaxed">{donation.description}</p>
+              <p className="text-xs sm:text-sm text-text-primary leading-relaxed">{donation.description}</p>
             </div>
           )}
 
           {/* Key Metrics Grid */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+
             <div className="bg-bg p-3.5 rounded-2xl border border-border flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary flex items-center justify-center flex-shrink-0">
                 <Package className="w-5 h-5" />
