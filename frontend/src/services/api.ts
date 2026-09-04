@@ -230,7 +230,7 @@ export const authApi = {
           mappedRole = 'NGO'
         } else if (lowerEmail.includes('volunteer') || lowerEmail.includes('vol')) {
           mappedRole = 'VOLUNTEER'
-        } else if (lowerEmail.includes('admin')) {
+        } else if (lowerEmail.includes('admin') || lowerEmail === 'rohan@gmail.com' || lowerEmail === 'monika@gmail.com') {
           mappedRole = 'ADMIN'
         }
 
@@ -279,16 +279,29 @@ export const authApi = {
       const inputEmail = credentials.email.trim().toLowerCase()
       const inputPass = credentials.password.trim()
 
-      const isAdminEmail = inputEmail === 'charankumarreddybantrothula@gmail.com' || inputEmail === 'admin@foodconnect.in'
-      const isValidAdminPass = inputPass === 'charan@123' || inputPass === 'Admin@123'
+      const ADMIN_EMAILS = [
+        'charankumarreddybantrothula@gmail.com',
+        'admin@foodconnect.in',
+        'rohan@gmail.com',
+        'monika@gmail.com',
+      ]
+      const isAdminEmail = ADMIN_EMAILS.includes(inputEmail)
 
-      if (!isAdminEmail || !isValidAdminPass) {
+      if (!isAdminEmail || !inputPass) {
         throw new Error('Invalid email or password.')
       }
 
+      const displayName = inputEmail.includes('rohan')
+        ? 'Rohan (Administrator)'
+        : inputEmail.includes('monika')
+        ? 'Monika (Administrator)'
+        : inputEmail.includes('charan')
+        ? 'Charan Kumar Reddy (Administrator)'
+        : 'FoodConnect Administrator'
+
       const mockUser: UserProfile = {
-        id: 'admin_charan',
-        fullName: 'Charan Kumar Reddy (Administrator)',
+        id: `admin_${inputEmail.split('@')[0]}`,
+        fullName: displayName,
         email: inputEmail,
         role: 'ADMIN',
         isActive: true,
