@@ -34,20 +34,86 @@ export default function History({ onBack, role }: HistoryProps) {
   })
 
   const [donations, setDonations] = useState<DonationItem[]>([])
-  const [filter, setFilter] = useState<'all' | 'delivered' | 'pending' | 'cancelled'>('all')
+  const [filter, setFilter] = useState<'all' | 'accepted' | 'delivered' | 'pending' | 'cancelled'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedDonation, setSelectedDonation] = useState<DonationItem | null>(null)
 
+  // Sync donations with local accepted requests & updated donations cache
+  const syncDonationsWithLocalState = (rawDonations: DonationItem[]): DonationItem[] => {
+    try {
+      const localDonRaw = localStorage.getItem('foodconnect_local_donations')
+      const localDons: DonationItem[] = localDonRaw ? JSON.parse(localDonRaw) : []
+
+      const localReqRaw = localStorage.getItem('foodconnect_local_requests')
+      const localReqs: any[] = localReqRaw ? JSON.parse(localReqRaw) : []
+
+      // Create a status override map: donationId or normalized title -> status
+      const overrideMap = new Map<string, string>()
+
+      // 1. From local donations cache
+      localDons.forEach((ld) => {
+        if (ld.id && ld.status) overrideMap.set(ld.id, ld.status)
+        if (ld.title && ld.status) overrideMap.set(`title:${ld.title.trim().toLowerCase()}`, ld.status)
+      })
+
+      // 2. From local requests: if any request is ACCEPTED, donation status is ACCEPTED
+      localReqs.forEach((lr) => {
+        if (lr.status === 'ACCEPTED') {
+          if (lr.donationId) overrideMap.set(lr.donationId, 'ACCEPTED')
+          if (lr.foodTitle) overrideMap.set(`title:${lr.foodTitle.trim().toLowerCase()}`, 'ACCEPTED')
+        }
+      })
+
+      // Merge raw donations with local donations
+      const combined = [...rawDonations]
+      localDons.forEach((ld) => {
+        const existingIdx = combined.findIndex((c) => c.id === ld.id || (ld.title && c.title === ld.title))
+        if (existingIdx === -1) {
+          combined.push(ld)
+        } else {
+          // If local has newer status (e.g. ACCEPTED), prefer local status
+          combined[existingIdx] = {
+            ...combined[existingIdx],
+            status: ld.status || combined[existingIdx].status,
+          }
+        }
+      })
+
+      // Apply overrides to all items
+      return combined.map((item) => {
+        const idOverride = overrideMap.get(item.id)
+        const titleOverride = item.title ? overrideMap.get(`title:${item.title.trim().toLowerCase()}`) : undefined
+        const effectiveStatus = idOverride || titleOverride || item.status || 'AVAILABLE'
+        return {
+          ...item,
+          status: effectiveStatus,
+        }
+      })
+    } catch (_) {
+      return rawDonations
+    }
+  }
+
   useEffect(() => {
+    // 0. Immediate local storage baseline load
+    try {
+      const initial = syncDonationsWithLocalState([])
+      if (initial.length > 0) setDonations(initial)
+    } catch (_) {}
+
     // 1. REST API load
     const loadApi = async () => {
       try {
         if (user?.id) {
           const res = await donationApi.getMyDonations(user.id)
-          if (res?.content && res.content.length > 0) setDonations(res.content)
+          if (res?.content && res.content.length > 0) {
+            setDonations(syncDonationsWithLocalState(res.content))
+          }
         } else {
           const res = await donationApi.getDonations()
-          if (res?.content && res.content.length > 0) setDonations(res.content)
+          if (res?.content && res.content.length > 0) {
+            setDonations(syncDonationsWithLocalState(res.content))
+          }
         }
       } catch (_) {}
     }
@@ -78,21 +144,33 @@ export default function History({ onBack, role }: HistoryProps) {
             createdAt: data.createdAt || new Date().toISOString(),
           })
         })
-        if (list.length > 0) setDonations(list)
+        if (list.length > 0) setDonations(syncDonationsWithLocalState(list))
       },
       (err) => {
         console.warn('Firestore history live query warning:', err)
       }
     )
 
-    return () => unsubscribe()
+    // 3. Listen for internal donation update events & storage events
+    const handleLocalUpdate = () => {
+      setDonations((prev) => syncDonationsWithLocalState(prev))
+    }
+    window.addEventListener('foodconnect_donation_updated', handleLocalUpdate)
+    window.addEventListener('storage', handleLocalUpdate)
+
+    return () => {
+      unsubscribe()
+      window.removeEventListener('foodconnect_donation_updated', handleLocalUpdate)
+      window.removeEventListener('storage', handleLocalUpdate)
+    }
   }, [user?.id])
 
   const filtered = donations.filter((d) => {
     const matchStatus =
       filter === 'all' ||
+      (filter === 'accepted' && (d.status === 'ACCEPTED' || d.status === 'IN_TRANSIT' || d.status === 'PICKED_UP')) ||
       (filter === 'delivered' && (d.status === 'DELIVERED' || d.status === 'COMPLETED')) ||
-      (filter === 'pending' && (d.status === 'AVAILABLE' || d.status === 'CREATED' || d.status === 'REQUESTED' || d.status === 'ACCEPTED')) ||
+      (filter === 'pending' && (d.status === 'AVAILABLE' || d.status === 'CREATED' || d.status === 'REQUESTED')) ||
       (filter === 'cancelled' && (d.status === 'CANCELLED' || d.status === 'EXPIRED'))
 
     const matchQuery =
@@ -103,6 +181,7 @@ export default function History({ onBack, role }: HistoryProps) {
   })
 
   const deliveredCount = donations.filter((d) => d.status === 'DELIVERED' || d.status === 'COMPLETED').length
+  const acceptedCount = donations.filter((d) => d.status === 'ACCEPTED' || d.status === 'IN_TRANSIT' || d.status === 'PICKED_UP').length
 
   return (
     <div className="min-h-screen bg-bg font-inter">
@@ -114,7 +193,9 @@ export default function History({ onBack, role }: HistoryProps) {
           </button>
           <div className="flex-1">
             <h1 className="text-base font-bold text-text-primary font-poppins">Donation History</h1>
-            <p className="text-xs text-text-secondary">{donations.length} total · {deliveredCount} delivered</p>
+            <p className="text-xs text-text-secondary">
+              {donations.length} total · {acceptedCount > 0 ? `${acceptedCount} accepted · ` : ''}{deliveredCount} delivered
+            </p>
           </div>
           <button className="w-9 h-9 rounded-xl bg-bg border border-border flex items-center justify-center">
             <Filter className="w-4 h-4 text-text-secondary" />
@@ -135,7 +216,7 @@ export default function History({ onBack, role }: HistoryProps) {
 
       {/* Filter tabs */}
       <div className="bg-surface border-b border-border px-4 py-2 flex gap-2 overflow-x-auto scrollbar-none">
-        {(['all', 'delivered', 'pending', 'cancelled'] as const).map((f) => (
+        {(['all', 'accepted', 'delivered', 'pending', 'cancelled'] as const).map((f) => (
           <button
             key={f}
             onClick={() => setFilter(f)}
@@ -149,8 +230,9 @@ export default function History({ onBack, role }: HistoryProps) {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 p-4 max-w-2xl mx-auto">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 p-4 max-w-2xl mx-auto">
         {[
+          { label: 'Accepted', value: acceptedCount, color: 'text-blue-700', bg: 'bg-[#E3F2FD]' },
           { label: 'Delivered', value: deliveredCount, color: 'text-success', bg: 'bg-success/10' },
           { label: 'Total Recorded', value: `${donations.length}`, color: 'text-primary', bg: 'bg-primary-50' },
           { label: 'Meals Provided', value: `${donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)}`, color: 'text-accent', bg: 'bg-accent-50' },

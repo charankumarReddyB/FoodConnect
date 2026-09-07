@@ -104,12 +104,71 @@ export default function RequestReviewModal({
         }
       } catch (_) {}
 
-      // 4. Inform Spring Boot REST API
+      // 4. Update local donation cache and sync status
+      const newDonStatus = status === 'ACCEPTED' ? 'ACCEPTED' : 'AVAILABLE'
+      try {
+        const donRaw = localStorage.getItem('foodconnect_local_donations')
+        const list: any[] = donRaw ? JSON.parse(donRaw) : []
+        let matched = false
+        const updatedDons = list.map((d: any) => {
+          const matchId = targetDonationId && d.id === targetDonationId
+          const matchTitle = foodTitle && d.title && d.title.trim().toLowerCase() === foodTitle.trim().toLowerCase()
+          if (matchId || matchTitle) {
+            matched = true
+            return {
+              ...d,
+              status: newDonStatus,
+              updatedAt: nowIso,
+            }
+          }
+          return d
+        })
+
+        if (!matched && targetDonationId) {
+          updatedDons.unshift({
+            id: targetDonationId,
+            donorId: donation?.donorId || request?.donorId || '',
+            donorName: donation?.donorName || request?.donorName || 'Food Donor',
+            title: foodTitle,
+            description: donation?.description || '',
+            foodType: donation?.foodType || 'VEG',
+            quantityDescription: quantityDesc,
+            estimatedServings: servings,
+            preparedTime: nowIso,
+            expiryTime: donation?.expiryTime || nowIso,
+            pickupAddress,
+            deliveryMethod,
+            status: newDonStatus,
+            imageUrls: donation?.imageUrls || [],
+            createdAt: requestDate || nowIso,
+            updatedAt: nowIso,
+          })
+        }
+
+        localStorage.setItem('foodconnect_local_donations', JSON.stringify(updatedDons))
+      } catch (_) {}
+
+      // 5. Dispatch global event so all screens (Donation History, Dashboard) update instantly
+      try {
+        window.dispatchEvent(
+          new CustomEvent('foodconnect_donation_updated', {
+            detail: {
+              donationId: targetDonationId,
+              foodTitle,
+              status: newDonStatus,
+              requestId,
+            },
+          })
+        )
+        window.dispatchEvent(new Event('storage'))
+      } catch (_) {}
+
+      // 6. Inform Spring Boot REST API
       requestApi.respondToRequest(requestId, status).catch((err) => {
         console.log('Background REST respond call notice:', err)
       })
 
-      // 5. Send real-time notifications
+      // 7. Send real-time notifications
       const isVolDelivery = deliveryMethod === 'VOLUNTEER_DELIVERY'
       try {
         await notifyPartiesOnAction({

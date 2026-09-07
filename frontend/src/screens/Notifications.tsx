@@ -330,6 +330,7 @@ export default function Notifications({ onBack }: NotificationsProps) {
           }}
           onStatusChange={(reqId, newStatus) => {
             setSelectedRequest((prev) => (prev ? { ...prev, status: newStatus } : null))
+            setSelectedDonation((prev) => (prev ? { ...prev, status: newStatus === 'ACCEPTED' ? 'ACCEPTED' : 'AVAILABLE' } : null))
           }}
         />
       )}

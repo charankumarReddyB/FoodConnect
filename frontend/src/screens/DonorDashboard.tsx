@@ -43,25 +43,73 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
   const [selectedDonation, setSelectedDonation] = useState<DonationItem | null>(null)
   const [loading, setLoading] = useState(true)
 
+  // Sync donations with local accepted requests & updated donations cache
+  const syncDonationsWithLocalState = (rawDonations: DonationItem[]): DonationItem[] => {
+    try {
+      const localDonRaw = localStorage.getItem('foodconnect_local_donations')
+      const localDons: DonationItem[] = localDonRaw ? JSON.parse(localDonRaw) : []
+
+      const localReqRaw = localStorage.getItem('foodconnect_local_requests')
+      const localReqs: any[] = localReqRaw ? JSON.parse(localReqRaw) : []
+
+      const overrideMap = new Map<string, string>()
+
+      localDons.forEach((ld) => {
+        if (ld.id && ld.status) overrideMap.set(ld.id, ld.status)
+        if (ld.title && ld.status) overrideMap.set(`title:${ld.title.trim().toLowerCase()}`, ld.status)
+      })
+
+      localReqs.forEach((lr) => {
+        if (lr.status === 'ACCEPTED') {
+          if (lr.donationId) overrideMap.set(lr.donationId, 'ACCEPTED')
+          if (lr.foodTitle) overrideMap.set(`title:${lr.foodTitle.trim().toLowerCase()}`, 'ACCEPTED')
+        }
+      })
+
+      const combined = [...rawDonations]
+      localDons.forEach((ld) => {
+        const existingIdx = combined.findIndex((c) => c.id === ld.id || (ld.title && c.title === ld.title))
+        if (existingIdx === -1) {
+          combined.push(ld)
+        } else {
+          combined[existingIdx] = {
+            ...combined[existingIdx],
+            status: ld.status || combined[existingIdx].status,
+          }
+        }
+      })
+
+      return combined.map((item) => {
+        const idOverride = overrideMap.get(item.id)
+        const titleOverride = item.title ? overrideMap.get(`title:${item.title.trim().toLowerCase()}`) : undefined
+        const effectiveStatus = idOverride || titleOverride || item.status || 'AVAILABLE'
+        return {
+          ...item,
+          status: effectiveStatus,
+        }
+      })
+    } catch (_) {
+      return rawDonations
+    }
+  }
+
   useEffect(() => {
     let unsubscribe: () => void = () => {}
 
     // 1. Initial Local Storage & REST API load
     const loadInitialData = async () => {
       try {
-        const localRaw = localStorage.getItem('foodconnect_local_donations')
-        const localList: DonationItem[] = localRaw ? JSON.parse(localRaw) : []
+        const initial = syncDonationsWithLocalState([])
+        if (initial.length > 0) setDonations(initial)
 
         if (user?.id) {
           const res = await donationApi.getMyDonations(user.id).catch(() => null)
           const apiList = res?.content || []
-          const combined = [...localList, ...apiList.filter(a => !localList.some(l => l.id === a.id))]
-          setDonations(combined)
+          setDonations(syncDonationsWithLocalState(apiList))
         } else {
           const res = await donationApi.getDonations().catch(() => null)
           const apiList = res?.content || []
-          const combined = [...localList, ...apiList.filter(a => !localList.some(l => l.id === a.id))]
-          setDonations(combined)
+          setDonations(syncDonationsWithLocalState(apiList))
         }
       } catch (_) {} finally {
         setLoading(false)
@@ -99,10 +147,7 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
           })
         })
 
-        const localRaw = localStorage.getItem('foodconnect_local_donations')
-        const localList: DonationItem[] = localRaw ? JSON.parse(localRaw) : []
-        const merged = [...localList, ...liveList.filter(l => !localList.some(loc => loc.id === l.id))]
-
+        const merged = syncDonationsWithLocalState(liveList)
         if (merged.length > 0) {
           setDonations(merged)
           setLoading(false)
@@ -110,7 +155,18 @@ export default function DonorDashboard({ onNavigate }: DonorDashboardProps) {
       })
     } catch (_) {}
 
-    return () => unsubscribe()
+    // 3. Listen for internal donation update events & storage events
+    const handleLocalUpdate = () => {
+      setDonations((prev) => syncDonationsWithLocalState(prev))
+    }
+    window.addEventListener('foodconnect_donation_updated', handleLocalUpdate)
+    window.addEventListener('storage', handleLocalUpdate)
+
+    return () => {
+      unsubscribe()
+      window.removeEventListener('foodconnect_donation_updated', handleLocalUpdate)
+      window.removeEventListener('storage', handleLocalUpdate)
+    }
   }, [user?.id])
 
   const totalServings = donations.reduce((acc, d) => acc + (d.estimatedServings || 0), 0)

@@ -230,8 +230,30 @@ export default function DonationDetailsModal({ donation, onClose, onClaim, userR
     }
   }
 
-  const isDonationAvailable = donation.status === 'AVAILABLE' || donation.status === 'CREATED'
-  const sc = statusConfig[donation.status] || statusConfig.AVAILABLE
+  const effectiveStatus = React.useMemo(() => {
+    try {
+      const localDonRaw = localStorage.getItem('foodconnect_local_donations')
+      if (localDonRaw) {
+        const list = JSON.parse(localDonRaw)
+        const found = list.find((d: any) => d.id === donation.id || (donation.title && d.title === donation.title))
+        if (found?.status) return found.status
+      }
+      const localReqRaw = localStorage.getItem('foodconnect_local_requests')
+      if (localReqRaw) {
+        const reqList = JSON.parse(localReqRaw)
+        const foundReq = reqList.find(
+          (r: any) =>
+            (r.donationId === donation.id || (donation.title && r.foodTitle === donation.title)) &&
+            r.status === 'ACCEPTED'
+        )
+        if (foundReq) return 'ACCEPTED'
+      }
+    } catch (_) {}
+    return donation.status || 'AVAILABLE'
+  }, [donation.id, donation.status, donation.title])
+
+  const isDonationAvailable = effectiveStatus === 'AVAILABLE' || effectiveStatus === 'CREATED'
+  const sc = statusConfig[effectiveStatus] || statusConfig.AVAILABLE
   const imgUrl = donation.imageUrls && donation.imageUrls.length > 0
     ? donation.imageUrls[0]
     : 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&h=400&fit=crop&auto=format'
@@ -356,6 +378,27 @@ export default function DonationDetailsModal({ donation, onClose, onClaim, userR
               </div>
             </div>
           </div>
+
+          {/* Donor View of Request Lifecycle */}
+          {(userRole === 'donor' || currentUser?.role === 'DONOR') && (
+            <div className="bg-bg rounded-2xl border border-border p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-text-primary uppercase tracking-wide">
+                  Donation Request Status
+                </span>
+                <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+                  {sc.label}
+                </span>
+              </div>
+              <p className="text-xs text-text-secondary leading-relaxed">
+                {effectiveStatus === 'ACCEPTED'
+                  ? 'Request Accepted! Food is reserved for recipient distribution. Volunteer coordination or pickup is active.'
+                  : effectiveStatus === 'REQUESTED'
+                  ? 'A recipient has submitted a request for this food. Review in Alerts or notifications.'
+                  : 'This food donation is currently active and open for recipient requests.'}
+              </p>
+            </div>
+          )}
 
           {/* Recipient Food Request Controls */}
           {isRecipientUser && (
