@@ -49,14 +49,36 @@ export default function DonationDetailsModal({ donation, onClose, onClaim, userR
     userRole === 'recipient' ||
     ['NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'SHELTER', 'RECIPIENT'].includes(currentUser?.role || '')
 
+  // Reset error/success state on modal open / donation switch
+  useEffect(() => {
+    setActionErrorMsg(null)
+    setActionSuccessMsg(null)
+  }, [donation?.id])
+
   // Check if current recipient already submitted a request for this donation
   useEffect(() => {
     let isMounted = true
     const checkUserRequest = async () => {
-      if (!currentUser?.id || !donation.id || !isRecipientUser) {
+      if (!currentUser?.id || !donation?.id || !isRecipientUser) {
         if (isMounted) setCheckingExisting(false)
         return
       }
+
+      // Check local cache first
+      try {
+        const localRaw = localStorage.getItem('foodconnect_local_requests')
+        if (localRaw) {
+          const list = JSON.parse(localRaw)
+          const found = list.find(
+            (r: any) => r.donationId === donation.id && (r.recipientId === currentUser.id || !r.recipientId)
+          )
+          if (found && isMounted) {
+            setExistingRequest(found)
+            setCheckingExisting(false)
+            return
+          }
+        }
+      } catch (_) {}
 
       try {
         // Query Firestore 'requests' collection
@@ -93,7 +115,7 @@ export default function DonationDetailsModal({ donation, onClose, onClaim, userR
     return () => {
       isMounted = false
     }
-  }, [donation.id, currentUser?.id, isRecipientUser])
+  }, [donation?.id, currentUser?.id, isRecipientUser])
 
   const handleRequestFood = async () => {
     if (!currentUser?.id) {
@@ -140,13 +162,27 @@ export default function DonationDetailsModal({ donation, onClose, onClaim, userR
         requestedAt: nowIso,
       }
 
-      // 3. Save request record to Firestore 'requests' & 'donation_requests'
-      await setDoc(doc(firestore, 'requests', requestId), requestData)
+      // 1. Immediate local storage persistence cache
       try {
-        await setDoc(doc(firestore, 'donation_requests', requestId), requestData)
+        const localRaw = localStorage.getItem('foodconnect_local_requests')
+        const localList = localRaw ? JSON.parse(localRaw) : []
+        localStorage.setItem('foodconnect_local_requests', JSON.stringify([requestData, ...localList]))
       } catch (_) {}
 
-      // 4. Update donation status in Firestore to 'REQUESTED'
+      // 2. Save request record to Firestore 'donation_requests' & 'requests'
+      try {
+        await setDoc(doc(firestore, 'donation_requests', requestId), requestData)
+      } catch (err) {
+        console.warn('Firestore donation_requests write notice:', err)
+      }
+
+      try {
+        await setDoc(doc(firestore, 'requests', requestId), requestData)
+      } catch (err) {
+        console.warn('Firestore requests write notice:', err)
+      }
+
+      // 3. Update donation status in Firestore to 'REQUESTED'
       try {
         const donationRef = doc(firestore, 'donations', donation.id)
         await updateDoc(donationRef, {
@@ -157,24 +193,30 @@ export default function DonationDetailsModal({ donation, onClose, onClaim, userR
         console.warn('Could not update donation status in Firestore:', err)
       }
 
-      // 5. Asynchronously call Spring Boot REST API
-      requestApi.requestDonation(donation.id, requestedServings, requestNotes).catch((err) => {
-        console.log('Background Spring Boot request call notice:', err)
-      })
+      // 4. Asynchronously call Spring Boot REST API
+      try {
+        await requestApi.requestDonation(donation.id, requestedServings, requestNotes)
+      } catch (err) {
+        console.log('Spring Boot request call status notice:', err)
+      }
 
-      // 6. Send real-time notification to the donor
-      await notifyPartiesOnAction({
-        action: 'REQUESTED',
-        foodTitle: donation.title,
-        donorName: donation.donorName,
-        donorId: donation.donorId,
-        recipientName: currentUser.fullName || 'Recipient Organization',
-        recipientId: currentUser.id,
-        donationId: donation.id,
-        requestId,
-      })
+      // 5. Send real-time notification to the donor
+      try {
+        await notifyPartiesOnAction({
+          action: 'REQUESTED',
+          foodTitle: donation.title,
+          donorName: donation.donorName,
+          donorId: donation.donorId,
+          recipientName: currentUser.fullName || 'Recipient Organization',
+          recipientId: currentUser.id,
+          donationId: donation.id,
+          requestId,
+        })
+      } catch (notifErr) {
+        console.warn('Notification dispatch notice:', notifErr)
+      }
 
-      // 7. Success state
+      // 6. Success state
       setExistingRequest(requestData)
       setActionSuccessMsg('Food request sent successfully. Request status: Pending.')
       if (onClaim) {
@@ -182,7 +224,7 @@ export default function DonationDetailsModal({ donation, onClose, onClaim, userR
       }
     } catch (err: any) {
       console.error('Failed to submit food request:', err)
-      setActionErrorMsg(err.message || 'Failed to submit food request. Please try again.')
+      setActionErrorMsg('Failed to submit food request. Please try again.')
     } finally {
       setIsSubmitting(false)
     }

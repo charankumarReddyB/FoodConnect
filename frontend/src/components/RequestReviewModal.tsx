@@ -92,24 +92,40 @@ export default function RequestReviewModal({
         } catch (_) {}
       }
 
-      // 3. Inform Spring Boot REST API
+      // 3. Update local request cache
+      try {
+        const raw = localStorage.getItem('foodconnect_local_requests')
+        if (raw) {
+          const list = JSON.parse(raw)
+          const updated = list.map((item: any) =>
+            item.id === requestId ? { ...item, status, updatedAt: nowIso, respondedAt: nowIso } : item
+          )
+          localStorage.setItem('foodconnect_local_requests', JSON.stringify(updated))
+        }
+      } catch (_) {}
+
+      // 4. Inform Spring Boot REST API
       requestApi.respondToRequest(requestId, status).catch((err) => {
         console.log('Background REST respond call notice:', err)
       })
 
-      // 4. Send real-time notifications
+      // 5. Send real-time notifications
       const isVolDelivery = deliveryMethod === 'VOLUNTEER_DELIVERY'
-      await notifyPartiesOnAction({
-        action: status,
-        foodTitle,
-        donorName: donation?.donorName || request?.donorName,
-        donorId: donation?.donorId || request?.donorId,
-        recipientName,
-        recipientId: request?.recipientId,
-        donationId: targetDonationId,
-        requestId,
-        volunteerDeliveryRequired: status === 'ACCEPTED' && isVolDelivery,
-      })
+      try {
+        await notifyPartiesOnAction({
+          action: status,
+          foodTitle,
+          donorName: donation?.donorName || request?.donorName,
+          donorId: donation?.donorId || request?.donorId,
+          recipientName,
+          recipientId: request?.recipientId,
+          donationId: targetDonationId,
+          requestId,
+          volunteerDeliveryRequired: status === 'ACCEPTED' && isVolDelivery,
+        })
+      } catch (notifErr) {
+        console.warn('Notification dispatch error caught:', notifErr)
+      }
 
       setCurrentStatus(status)
       if (status === 'ACCEPTED') {
@@ -133,7 +149,7 @@ export default function RequestReviewModal({
       console.error('Error responding to request:', err)
       setFeedbackMessage({
         type: 'error',
-        text: err.message || 'Failed to update request. Please try again.',
+        text: 'Failed to update request. Please try again.',
       })
     } finally {
       setIsProcessing(false)
