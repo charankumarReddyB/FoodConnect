@@ -30,6 +30,9 @@ type Screen =
   | 'recipient-dashboard'
   | 'volunteer-dashboard'
   | 'admin-dashboard'
+  | 'admin-users'
+  | 'admin-donations'
+  | 'admin-checkins'
   | 'post-donation'
   | 'nearby'
   | 'notifications'
@@ -69,9 +72,9 @@ const navItems: Record<Role, { icon: React.ElementType; label: string; screen: S
   ],
   admin: [
     { icon: LayoutDashboard, label: 'Dashboard', screen: 'admin-dashboard' },
-    { icon: Users, label: 'Users', screen: 'history' },
-    { icon: Heart, label: 'Donations', screen: 'nearby' },
-    { icon: BarChart3, label: 'Reports', screen: 'notifications' },
+    { icon: Users, label: 'Users', screen: 'admin-users' },
+    { icon: Heart, label: 'Donations', screen: 'admin-donations' },
+    { icon: BarChart3, label: 'Analytics', screen: 'admin-dashboard' },
     { icon: Settings, label: 'Settings', screen: 'settings' },
   ],
 }

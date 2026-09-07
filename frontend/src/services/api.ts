@@ -613,3 +613,82 @@ export const deliveryApi = {
     return response
   },
 }
+
+// Food Donation Request API (Spring Boot /api/v1/requests)
+export const requestApi = {
+  async requestDonation(donationId: string, requestedServings?: number, notes?: string): Promise<any> {
+    const query = new URLSearchParams()
+    if (requestedServings !== undefined) query.append('requestedServings', requestedServings.toString())
+    if (notes) query.append('notes', notes)
+    const response = await fetch(`${API_BASE_URL}/requests/donation/${donationId}?${query.toString()}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<any>(response, 'Failed to submit food request')
+  },
+
+  async respondToRequest(requestId: string, status: 'ACCEPTED' | 'REJECTED'): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/requests/${requestId}/respond?status=${status}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<any>(response, `Failed to update request to ${status}`)
+  },
+
+  async getRequestsForDonation(donationId: string, page: number = 0, size: number = 10): Promise<PagedResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/requests/donation/${donationId}?page=${page}&size=${size}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<PagedResponse<any>>(response, 'Failed to fetch requests for donation')
+  },
+
+  async getMyRequests(page: number = 0, size: number = 10): Promise<PagedResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/requests/my-requests?page=${page}&size=${size}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<PagedResponse<any>>(response, 'Failed to fetch user requests')
+  },
+}
+
+// Admin API (Spring Boot /api/v1/admin)
+export const adminApi = {
+  async getDashboardStats(): Promise<Record<string, any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/stats`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<Record<string, any>>(response, 'Failed to fetch admin stats')
+  },
+
+  async getAllUsers(role?: string, page: number = 0, size: number = 50): Promise<PagedResponse<UserProfile>> {
+    const query = new URLSearchParams()
+    if (role && role !== 'ALL') query.append('role', role)
+    query.append('page', page.toString())
+    query.append('size', size.toString())
+
+    const response = await fetch(`${API_BASE_URL}/admin/users?${query.toString()}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<PagedResponse<UserProfile>>(response, 'Failed to fetch admin users')
+  },
+
+  async toggleUserStatus(userId: string, active: boolean): Promise<any> {
+    const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/toggle-status?active=${active}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<any>(response, 'Failed to update user account status')
+  },
+
+  async getActivityLogs(page: number = 0, size: number = 20): Promise<PagedResponse<any>> {
+    const response = await fetch(`${API_BASE_URL}/admin/logs?page=${page}&size=${size}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    })
+    return safeJsonResponse<PagedResponse<any>>(response, 'Failed to fetch audit logs')
+  },
+}
+

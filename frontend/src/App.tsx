@@ -26,6 +26,9 @@ type Screen =
   | 'recipient-dashboard'
   | 'volunteer-dashboard'
   | 'admin-dashboard'
+  | 'admin-users'
+  | 'admin-donations'
+  | 'admin-checkins'
   | 'post-donation'
   | 'nearby'
   | 'notifications'
@@ -47,6 +50,9 @@ const AUTHED_SCREENS: Screen[] = [
   'recipient-dashboard',
   'volunteer-dashboard',
   'admin-dashboard',
+  'admin-users',
+  'admin-donations',
+  'admin-checkins',
   'post-donation',
   'nearby',
   'notifications',
@@ -187,7 +193,13 @@ export default function App() {
       case 'volunteer-dashboard':
         return <VolunteerDashboard onNavigate={navigate} />
       case 'admin-dashboard':
-        return <AdminDashboard onNavigate={navigate} />
+        return <AdminDashboard onNavigate={navigate} initialTab="analytics" />
+      case 'admin-users':
+        return <AdminDashboard onNavigate={navigate} initialTab="users" />
+      case 'admin-donations':
+        return <AdminDashboard onNavigate={navigate} initialTab="donations" />
+      case 'admin-checkins':
+        return <AdminDashboard onNavigate={navigate} initialTab="checkins" />
       case 'notifications':
         return <Notifications onBack={() => setScreen(dashboardForRole[role])} />
       case 'profile':

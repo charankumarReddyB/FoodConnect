@@ -1,6 +1,9 @@
-import React from 'react'
-import { X, MapPin, Clock, Users, Package, CheckCircle, TrendingUp, AlertCircle, Truck, Building } from 'lucide-react'
-import { DonationItem } from '../services/api'
+import React, { useState, useEffect } from 'react'
+import { X, MapPin, Clock, Users, Package, CheckCircle, TrendingUp, AlertCircle, Truck, Building, Send, Loader2 } from 'lucide-react'
+import { DonationItem, UserProfile, requestApi } from '../services/api'
+import { firestore } from '../config/firebase'
+import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore'
+import { notifyPartiesOnAction } from '../services/notificationService'
 
 interface DonationDetailsModalProps {
   donation: DonationItem | null
@@ -22,9 +25,170 @@ const statusConfig: Record<string, { label: string; bg: string; text: string; ic
   EXPIRED: { label: 'Expired', bg: 'bg-gray-50 text-gray-700 border-gray-200', text: 'text-gray-700', icon: Clock },
 }
 
-export default function DonationDetailsModal({ donation, onClose, onClaim }: DonationDetailsModalProps) {
+export default function DonationDetailsModal({ donation, onClose, onClaim, userRole }: DonationDetailsModalProps) {
   if (!donation) return null
 
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => {
+    try {
+      const raw = localStorage.getItem('foodconnect_user')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  })
+
+  const [requestedServings, setRequestedServings] = useState<number>(donation.estimatedServings || 10)
+  const [requestNotes, setRequestNotes] = useState<string>('')
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+  const [existingRequest, setExistingRequest] = useState<any | null>(null)
+  const [checkingExisting, setCheckingExisting] = useState<boolean>(true)
+  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null)
+  const [actionErrorMsg, setActionErrorMsg] = useState<string | null>(null)
+
+  const isRecipientUser =
+    userRole === 'recipient' ||
+    ['NGO', 'ORPHANAGE', 'OLD_AGE_HOME', 'SHELTER', 'RECIPIENT'].includes(currentUser?.role || '')
+
+  // Check if current recipient already submitted a request for this donation
+  useEffect(() => {
+    let isMounted = true
+    const checkUserRequest = async () => {
+      if (!currentUser?.id || !donation.id || !isRecipientUser) {
+        if (isMounted) setCheckingExisting(false)
+        return
+      }
+
+      try {
+        // Query Firestore 'requests' collection
+        const q1 = query(
+          collection(firestore, 'requests'),
+          where('donationId', '==', donation.id),
+          where('recipientId', '==', currentUser.id)
+        )
+        const snap1 = await getDocs(q1)
+        if (!snap1.empty && isMounted) {
+          setExistingRequest(snap1.docs[0].data())
+          setCheckingExisting(false)
+          return
+        }
+
+        // Also check 'donation_requests' for backend sync compatibility
+        const q2 = query(
+          collection(firestore, 'donation_requests'),
+          where('donationId', '==', donation.id),
+          where('recipientId', '==', currentUser.id)
+        )
+        const snap2 = await getDocs(q2)
+        if (!snap2.empty && isMounted) {
+          setExistingRequest(snap2.docs[0].data())
+        }
+      } catch (err) {
+        console.warn('Could not check existing donation requests:', err)
+      } finally {
+        if (isMounted) setCheckingExisting(false)
+      }
+    }
+
+    checkUserRequest()
+    return () => {
+      isMounted = false
+    }
+  }, [donation.id, currentUser?.id, isRecipientUser])
+
+  const handleRequestFood = async () => {
+    if (!currentUser?.id) {
+      setActionErrorMsg('Please log in as a recipient to request food.')
+      return
+    }
+
+    // 1. Validate donation availability
+    if (donation.status !== 'AVAILABLE' && donation.status !== 'CREATED') {
+      setActionErrorMsg(`This donation is no longer available. Status: ${donation.status}`)
+      return
+    }
+
+    // 2. Validate no duplicate request
+    if (existingRequest && existingRequest.status !== 'REJECTED') {
+      setActionErrorMsg('You have already submitted a request for this food donation.')
+      return
+    }
+
+    setIsSubmitting(true)
+    setActionErrorMsg(null)
+
+    try {
+      const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+      const nowIso = new Date().toISOString()
+
+      const requestData = {
+        id: requestId,
+        donationId: donation.id,
+        donorId: donation.donorId || '',
+        donorName: donation.donorName || 'Food Donor',
+        recipientId: currentUser.id,
+        recipientName: currentUser.fullName || 'Recipient Organization',
+        recipientPhone: currentUser.phone || '',
+        foodTitle: donation.title,
+        quantityDescription: donation.quantityDescription,
+        requestedServings: requestedServings || donation.estimatedServings || 10,
+        notes: requestNotes.trim() || 'Food request for meal distribution',
+        status: 'PENDING',
+        pickupAddress: donation.pickupAddress,
+        deliveryMethod: donation.deliveryMethod,
+        createdAt: nowIso,
+        requestTime: nowIso,
+        requestedAt: nowIso,
+      }
+
+      // 3. Save request record to Firestore 'requests' & 'donation_requests'
+      await setDoc(doc(firestore, 'requests', requestId), requestData)
+      try {
+        await setDoc(doc(firestore, 'donation_requests', requestId), requestData)
+      } catch (_) {}
+
+      // 4. Update donation status in Firestore to 'REQUESTED'
+      try {
+        const donationRef = doc(firestore, 'donations', donation.id)
+        await updateDoc(donationRef, {
+          status: 'REQUESTED',
+          updatedAt: nowIso,
+        })
+      } catch (err) {
+        console.warn('Could not update donation status in Firestore:', err)
+      }
+
+      // 5. Asynchronously call Spring Boot REST API
+      requestApi.requestDonation(donation.id, requestedServings, requestNotes).catch((err) => {
+        console.log('Background Spring Boot request call notice:', err)
+      })
+
+      // 6. Send real-time notification to the donor
+      await notifyPartiesOnAction({
+        action: 'REQUESTED',
+        foodTitle: donation.title,
+        donorName: donation.donorName,
+        donorId: donation.donorId,
+        recipientName: currentUser.fullName || 'Recipient Organization',
+        recipientId: currentUser.id,
+        donationId: donation.id,
+        requestId,
+      })
+
+      // 7. Success state
+      setExistingRequest(requestData)
+      setActionSuccessMsg('Food request sent successfully. Request status: Pending.')
+      if (onClaim) {
+        onClaim({ ...donation, status: 'REQUESTED' })
+      }
+    } catch (err: any) {
+      console.error('Failed to submit food request:', err)
+      setActionErrorMsg(err.message || 'Failed to submit food request. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const isDonationAvailable = donation.status === 'AVAILABLE' || donation.status === 'CREATED'
   const sc = statusConfig[donation.status] || statusConfig.AVAILABLE
   const imgUrl = donation.imageUrls && donation.imageUrls.length > 0
     ? donation.imageUrls[0]
@@ -35,7 +199,7 @@ export default function DonationDetailsModal({ donation, onClose, onClaim }: Don
       <div className="bg-surface border border-border rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col relative animate-scale-in">
         
         {/* Header Image */}
-        <div className="relative h-40 sm:h-48 w-full bg-bg">
+        <div className="relative h-40 sm:h-48 w-full bg-bg flex-shrink-0">
           <img src={imgUrl} alt={donation.title} className="w-full h-full object-cover rounded-t-3xl" />
           <button
             onClick={onClose}
@@ -62,8 +226,25 @@ export default function DonationDetailsModal({ donation, onClose, onClaim }: Don
                 {donation.foodType}
               </span>
             </div>
-            <p className="text-xs text-text-secondary mt-1">ID: {donation.id} · Posted by <span className="font-semibold text-text-primary">{donation.donorName || 'Food Donor'}</span></p>
+            <p className="text-xs text-text-secondary mt-1">
+              ID: {donation.id} · Donor: <span className="font-semibold text-text-primary">{donation.donorName || 'Food Donor'}</span>
+            </p>
           </div>
+
+          {/* Feedback messages */}
+          {actionSuccessMsg && (
+            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3.5 rounded-2xl flex items-center gap-2.5 text-xs font-semibold animate-fade-in">
+              <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+              <span>{actionSuccessMsg}</span>
+            </div>
+          )}
+
+          {actionErrorMsg && (
+            <div className="bg-red-50 border border-red-200 text-red-800 p-3.5 rounded-2xl flex items-center gap-2.5 text-xs font-semibold animate-fade-in">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+              <span>{actionErrorMsg}</span>
+            </div>
+          )}
 
           {/* Description */}
           {donation.description && (
@@ -75,7 +256,6 @@ export default function DonationDetailsModal({ donation, onClose, onClaim }: Don
 
           {/* Key Metrics Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-
             <div className="bg-bg p-3.5 rounded-2xl border border-border flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-primary-50 text-primary flex items-center justify-center flex-shrink-0">
                 <Package className="w-5 h-5" />
@@ -91,7 +271,7 @@ export default function DonationDetailsModal({ donation, onClose, onClaim }: Don
                 <Users className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-text-secondary uppercase">Servings</p>
+                <p className="text-[10px] font-semibold text-text-secondary uppercase">Est. Servings</p>
                 <p className="text-sm font-bold text-text-primary">{donation.estimatedServings} Servings</p>
               </div>
             </div>
@@ -129,28 +309,130 @@ export default function DonationDetailsModal({ donation, onClose, onClaim }: Don
               <div className="flex-1 flex justify-between items-center text-xs">
                 <span className="text-text-secondary">Delivery Method:</span>
                 <span className="font-semibold text-text-primary">
-                  {donation.deliveryMethod === 'VOLUNTEER_DELIVERY' ? 'Volunteer Delivery' : 'Recipient Self-Pickup'}
+                  {donation.deliveryMethod === 'VOLUNTEER_DELIVERY' ? 'Volunteer Delivery Required' : 'Recipient Self-Pickup'}
                 </span>
               </div>
             </div>
           </div>
 
+          {/* Recipient Food Request Controls */}
+          {isRecipientUser && (
+            <div className="bg-primary-50/50 border border-primary-200 rounded-2xl p-4 space-y-3">
+              <h3 className="text-xs font-bold text-primary uppercase tracking-wide flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5" /> Food Request Details
+              </h3>
+
+              {checkingExisting ? (
+                <div className="flex items-center justify-center py-2 text-xs text-text-secondary gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <span>Checking existing request status...</span>
+                </div>
+              ) : existingRequest ? (
+                <div className="bg-surface rounded-xl p-3 border border-border space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-text-secondary">Your Request Status:</span>
+                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                      existingRequest.status === 'ACCEPTED'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : existingRequest.status === 'REJECTED'
+                        ? 'bg-red-100 text-red-800'
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {existingRequest.status || 'PENDING'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-text-secondary">
+                    Requested {existingRequest.requestedServings || donation.estimatedServings} servings on{' '}
+                    {existingRequest.requestedAt ? new Date(existingRequest.requestedAt).toLocaleDateString() : 'recently'}.
+                  </p>
+                </div>
+              ) : !isDonationAvailable ? (
+                <div className="bg-surface rounded-xl p-3 border border-border text-xs text-text-secondary">
+                  This food donation is currently <span className="font-bold text-text-primary">{donation.status}</span> and cannot accept new requests.
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-text-secondary block mb-1">
+                      Servings Needed (Max: {donation.estimatedServings})
+                    </label>
+                    <input
+                      type="number"
+                      min={1}
+                      max={donation.estimatedServings || 500}
+                      value={requestedServings}
+                      onChange={(e) => setRequestedServings(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs font-medium text-text-primary focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-text-secondary block mb-1">
+                      Distribution Note (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Dinner distribution for orphanage children"
+                      value={requestNotes}
+                      onChange={(e) => setRequestNotes(e.target.value)}
+                      className="w-full px-3 py-2 bg-surface border border-border rounded-xl text-xs font-medium text-text-primary focus:outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Action Buttons */}
-          <div className="pt-2 flex items-center gap-3">
-            {onClaim && donation.status === 'AVAILABLE' && (
+          <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5 sm:gap-3">
+            {isRecipientUser ? (
+              existingRequest ? (
+                <button
+                  disabled
+                  className="w-full sm:flex-1 bg-gray-100 text-gray-400 border border-gray-200 font-bold py-3.5 rounded-2xl text-xs cursor-not-allowed"
+                >
+                  Already Requested ({existingRequest.status})
+                </button>
+              ) : !isDonationAvailable ? (
+                <button
+                  disabled
+                  className="w-full sm:flex-1 bg-gray-100 text-gray-400 border border-gray-200 font-bold py-3.5 rounded-2xl text-xs cursor-not-allowed"
+                >
+                  Donation Unavailable ({donation.status})
+                </button>
+              ) : (
+                <button
+                  onClick={handleRequestFood}
+                  disabled={isSubmitting}
+                  className="w-full sm:flex-1 bg-primary text-white font-bold py-3.5 rounded-2xl text-xs sm:text-sm shadow-lg hover:bg-primary-dark transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Submitting Request...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      <span>Request Food</span>
+                    </>
+                  )}
+                </button>
+              )
+            ) : onClaim && isDonationAvailable ? (
               <button
                 onClick={() => {
                   onClaim(donation)
                   onClose()
                 }}
-                className="flex-1 bg-primary text-white font-bold py-3.5 rounded-2xl text-sm shadow-lg hover:bg-primary-dark transition-all"
+                className="w-full sm:flex-1 bg-primary text-white font-bold py-3.5 rounded-2xl text-sm shadow-lg hover:bg-primary-dark transition-all cursor-pointer"
               >
                 Claim This Donation
               </button>
-            )}
+            ) : null}
+
             <button
               onClick={onClose}
-              className="flex-1 bg-bg border border-border text-text-primary font-bold py-3.5 rounded-2xl text-sm hover:bg-border transition-all"
+              className="w-full sm:flex-1 bg-bg border border-border text-text-primary font-bold py-3.5 rounded-2xl text-xs sm:text-sm hover:bg-border transition-all cursor-pointer"
             >
               Close
             </button>
